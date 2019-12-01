@@ -8,10 +8,18 @@ fn main() -> Result<()> {
 
     let mut total_fuel: u32 = 0;
     for line in reader.lines() {
-        let mass: u32 = line?.parse()?;
-        let fuel = mass / 3 - 2;
-        // println!("{} -> {}", mass, fuel);
-        total_fuel += fuel;
+        let mut mass: u32 = line?.parse()?;
+
+        loop {
+            let mass3 = mass / 3;
+            if mass3 <= 2 {
+                break;
+            }
+            let fuel = mass3 - 2;
+            // println!("{} -> {}", mass, fuel);
+            total_fuel += fuel;
+            mass = fuel;
+        }
     }
     println!("Total fuel: {}", total_fuel);
 

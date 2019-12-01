@@ -1,2 +1,2 @@
 [workspace]
-members = ["task01_1"]
+members = ["task01_1", "task01_2"]

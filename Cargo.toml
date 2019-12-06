@@ -1,2 +1,9 @@
 [workspace]
-members = ["task01_1", "task01_2"]
+members = [
+    "task01_1", "task01_2",
+    "task02_1", "task02_2",
+    "task03_1", "task03_2",
+    "task04_1", "task04_2",
+    "task05_1", "task05_2",
+    "task06_1", "task06_2",
+]

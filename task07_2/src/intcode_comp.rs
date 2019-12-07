@@ -29,7 +29,6 @@ enum Status {
 
 pub struct IntcodeComp<'a> {
     prog: Vec<i32>,
-    phase: i32,
     ip: usize,
     input: Vec<i32>,
     status: Status,
@@ -39,13 +38,13 @@ pub struct IntcodeComp<'a> {
 impl<'a> IntcodeComp<'a> {
     pub fn new(prog: Vec<i32>, phase: i32, log: &'a Log) -> Self {
         log.println("    New comp");
+
         Self {
             prog,
-            phase,
             ip: 0,
             input: vec![phase],
             status: Status::Running,
-            log
+            log,
         }
     }
 
@@ -58,7 +57,12 @@ impl<'a> IntcodeComp<'a> {
     }
 
     pub fn run(&mut self, input: i32) -> Result<i32> {
-        ensure!(!self.is_halted(), "ERROR: Program was halted. ip={} status={:?}.", self.ip, self.status);
+        ensure!(
+            !self.is_halted(),
+            "ERROR: Program was halted. ip={} status={:?}.",
+            self.ip,
+            self.status
+        );
 
         let mut output = input;
 
@@ -67,17 +71,11 @@ impl<'a> IntcodeComp<'a> {
 
         self.log.println(format!("    Input: {:?}", self.input));
 
-        while self.is_running() {
-            self.eval_cmd(&mut output)?;
-            self.check_ip(
-                self.ip,
-                format!("Command evaluation produced wrong instruction pointer"),
-            )?;
-        }
+        while self.eval_cmd(&mut output)? {}
 
         if self.input.len() > 0 {
             self.log.println(format!(
-                "WARNING: Input buffer was not consumed completely. Remaining values: {:?}",
+                "WARNING: Input buffer was not consumed completely. Remaining values: {:?}.",
                 self.input
             ));
         }
@@ -107,13 +105,13 @@ impl<'a> IntcodeComp<'a> {
         Ok(())
     }
 
-    /// Returns false if execution should be stopped
-    fn eval_cmd(&mut self, output: &mut i32) -> Result<()> {
+    /// Returns false if execution should be stopped or paused
+    fn eval_cmd(&mut self, output: &mut i32) -> Result<bool> {
         ensure!(self.is_running(), "ERROR: Program is not running.");
         // self.check_ip(self.ip, format!("Cannot read command opcode"));
 
         let (cmd, params) = self.parse_opcode(self.ip)?;
-        // self.log.println(format!("Command[{}:{}]: {:?}({:?})", self.ip, self.prog[self.ip], cmd, params));
+
         self.dump_cmd(&cmd, &params)?;
 
         self.check_ip(
@@ -181,13 +179,7 @@ impl<'a> IntcodeComp<'a> {
                 );
 
                 *output = self.get_param_value(1, params[0])?;
-                let (next_cmd, _) = self.parse_opcode(self.ip + params.len() + 1)?;
-
-                self.status = if let Command::Exit = next_cmd {
-                    Status::Halted
-                } else {
-                    Status::Paused
-                };
+                self.status = Status::Paused;
             }
             Command::JumpIfTrue => {
                 ensure!(
@@ -200,7 +192,7 @@ impl<'a> IntcodeComp<'a> {
 
                 if v1 != 0 {
                     self.ip = self.get_param_value(2, params[1])? as usize;
-                    return Ok(());
+                    return Ok(true);
                 }
             }
             Command::JumpIfFalse => {
@@ -214,7 +206,7 @@ impl<'a> IntcodeComp<'a> {
 
                 if v1 == 0 {
                     self.ip = self.get_param_value(2, params[1])? as usize;
-                    return Ok(());
+                    return Ok(true);
                 }
             }
             Command::LessThan => {
@@ -256,7 +248,7 @@ impl<'a> IntcodeComp<'a> {
 
         self.ip += params.len() + 1;
 
-        Ok(())
+        Ok(self.status == Status::Running)
     }
 
     /// Returns command and its parameter modes

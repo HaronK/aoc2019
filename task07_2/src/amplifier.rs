@@ -13,7 +13,7 @@ impl<'a> Amplifier<'a> {
         let mut result = Self {
             prog: Vec::new(),
             comps: Vec::new(),
-            log
+            log,
         };
 
         result.parse(commands)?;
@@ -24,13 +24,15 @@ impl<'a> Amplifier<'a> {
     pub fn run(&mut self, phase_settings: &Vec<i32>) -> Result<i32> {
         self.log.println(format!("Commands: {}", self.prog.len()));
         self.log.println(format!("Phases: {:?}", phase_settings));
+
         let steps = phase_settings.len();
         ensure!(steps > 0, "ERROR: No phase settings are set.");
 
         self.comps.clear();
 
         for phase in phase_settings {
-            self.comps.push(IntcodeComp::new(self.prog.clone(), *phase, self.log));
+            self.comps
+                .push(IntcodeComp::new(self.prog.clone(), *phase, self.log));
         }
 
         let mut result = 0;

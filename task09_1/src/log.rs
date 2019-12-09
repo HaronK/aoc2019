@@ -12,7 +12,7 @@ impl Log {
             print!("{}", msg.as_ref());
         }
     }
-    
+
     pub fn println<S: AsRef<str>>(&self, msg: S) {
         if self.active {
             println!("{}", msg.as_ref());

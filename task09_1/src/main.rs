@@ -47,8 +47,11 @@ mod tests {
         let log = Log::new(false);
         let prog = parse_prog("109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99")?;
         let mut comp = IntcodeComp::new(prog, &log);
-    
-        assert_eq!(vec![109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99], comp.exec()?);
+
+        assert_eq!(
+            vec![109, 1, 204, -1, 1001, 100, 1, 100, 1008, 100, 16, 101, 1006, 101, 0, 99],
+            comp.exec()?
+        );
 
         Ok(())
     }
@@ -58,7 +61,7 @@ mod tests {
         let log = Log::new(false);
         let prog = parse_prog("1102,34915192,34915192,7,4,7,99,0")?;
         let mut comp = IntcodeComp::new(prog, &log);
-    
+
         assert_eq!(vec![1219070632396864], comp.exec()?);
 
         Ok(())
@@ -69,7 +72,7 @@ mod tests {
         let log = Log::new(false);
         let prog = parse_prog("104,1125899906842624,99")?;
         let mut comp = IntcodeComp::new(prog, &log);
-    
+
         assert_eq!(vec![1125899906842624], comp.exec()?);
 
         Ok(())

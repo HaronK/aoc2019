@@ -84,7 +84,11 @@ impl<'a> IntcodeComp<'a> {
             self.status
         );
 
-        let mut output = if self.input.len() > 0 { self.input[self.input.len() - 1] } else { 0 };
+        let mut output = if self.input.len() > 0 {
+            self.input[self.input.len() - 1]
+        } else {
+            0
+        };
 
         self.status = Status::Running;
 
@@ -322,7 +326,11 @@ impl<'a> IntcodeComp<'a> {
 
     fn check_and_extend(&mut self, ip: usize) {
         if ip >= self.prog.len() {
-            self.log.println(format!("    Extending program from {} to {} elements.", self.prog.len(), ip + 1));
+            self.log.println(format!(
+                "    Extending program from {} to {} elements.",
+                self.prog.len(),
+                ip + 1
+            ));
             self.prog.resize(ip + 1, 0);
         }
     }
@@ -356,7 +364,12 @@ impl<'a> IntcodeComp<'a> {
         Ok(value)
     }
 
-    fn set_param_value(&mut self, param_offset: usize, mode: ParamMode, value: DataType) -> Result<()> {
+    fn set_param_value(
+        &mut self,
+        param_offset: usize,
+        mode: ParamMode,
+        value: DataType,
+    ) -> Result<()> {
         ensure!(
             mode == ParamMode::Position || mode == ParamMode::Relative,
             "ERROR: Wrong destination parameter. Expected Position or Relative but was {:?}.",

@@ -44,7 +44,7 @@ mod tests {
 
     #[test]
     fn test1() -> Result<()> {
-        let log = Log::new(false);
+        let log = Log::new(true);
         let prog = parse_prog("109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99")?;
         let mut comp = IntcodeComp::new(prog, &log);
 

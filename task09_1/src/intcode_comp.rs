@@ -1,18 +1,67 @@
 use crate::log::*;
-use anyhow::{bail, ensure, Result};
+use anyhow::{bail, ensure, Context, Result};
 
 #[derive(Debug)]
 enum Command {
-    Add,           // 1
-    Mul,           // 2
-    Read,          // 3
-    Write,         // 4
-    JumpIfTrue,    // 5
-    JumpIfFalse,   // 6
-    LessThan,      // 7
-    Equals,        // 8
-    AdjustRelBase, // 9
-    Exit,          // 99
+    Add(ParamMode, ParamMode, ParamMode),      // 1
+    Mul(ParamMode, ParamMode, ParamMode),      // 2
+    Read(ParamMode),                           // 3
+    Write(ParamMode),                          // 4
+    JumpIfTrue(ParamMode, ParamMode),          // 5
+    JumpIfFalse(ParamMode, ParamMode),         // 6
+    LessThan(ParamMode, ParamMode, ParamMode), // 7
+    Equals(ParamMode, ParamMode, ParamMode),   // 8
+    AdjustRelBase(ParamMode),                  // 9
+    Exit,                                      // 99
+}
+
+impl Command {
+    fn parse(opc: DataType) -> Result<Self> {
+        let cmd_id = opc % 100;
+        let params = opc / 100;
+        let cmd = match cmd_id {
+            1 => {
+                let params = ParamMode::parse(params, 3)?;
+                Command::Add(params[0], params[1], params[2])
+            }
+            2 => {
+                let params = ParamMode::parse(params, 3)?;
+                Command::Mul(params[0], params[1], params[2])
+            }
+            3 => {
+                let params = ParamMode::parse(params, 1)?;
+                Command::Read(params[0])
+            }
+            4 => {
+                let params = ParamMode::parse(params, 1)?;
+                Command::Write(params[0])
+            }
+            5 => {
+                let params = ParamMode::parse(params, 2)?;
+                Command::JumpIfTrue(params[0], params[1])
+            }
+            6 => {
+                let params = ParamMode::parse(params, 2)?;
+                Command::JumpIfFalse(params[0], params[1])
+            }
+            7 => {
+                let params = ParamMode::parse(params, 3)?;
+                Command::LessThan(params[0], params[1], params[2])
+            }
+            8 => {
+                let params = ParamMode::parse(params, 3)?;
+                Command::Equals(params[0], params[1], params[2])
+            }
+            9 => {
+                let params = ParamMode::parse(params, 1)?;
+                Command::AdjustRelBase(params[0])
+            }
+            99 => Command::Exit,
+            _ => bail!("ERROR: Unknown command id {}.", opc % 100),
+        };
+
+        Ok(cmd)
+    }
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -20,6 +69,24 @@ enum ParamMode {
     Position,  // 0
     Immediate, // 1
     Relative,  // 2
+}
+
+impl ParamMode {
+    fn parse(opcode: DataType, count: u8) -> Result<Vec<ParamMode>> {
+        let mut result = Vec::new();
+        let mut opc = opcode;
+        for _i in 0..count {
+            let param_mode = match opc % 10 {
+                0 => ParamMode::Position,
+                1 => ParamMode::Immediate,
+                2 => ParamMode::Relative,
+                _ => bail!("ERROR: Unknown parameter mode {}", opc % 10),
+            };
+            result.push(param_mode);
+            opc /= 10;
+        }
+        Ok(result)
+    }
 }
 
 #[derive(PartialEq, Debug)]
@@ -109,26 +176,6 @@ impl<'a> IntcodeComp<'a> {
         Ok(output)
     }
 
-    fn dump_cmd(&mut self, cmd: &Command, params: &Vec<ParamMode>) -> Result<()> {
-        self.log.print(format!(
-            "  Command[{}:{}]: {:?}(",
-            self.ip, self.prog[self.ip], cmd
-        ));
-
-        for i in 0..params.len() {
-            let val = self.get_param_value(i + 1, params[i])?;
-            self.log.print(format!(
-                "{:?}:{}->{}, ",
-                params[i],
-                self.prog[self.ip + i + 1],
-                val
-            ));
-        }
-
-        self.log.println(format!(")"));
-        Ok(())
-    }
-
     fn rel_ip(&self, offset: DataType) -> usize {
         (self.rel_base as DataType + offset) as usize
     }
@@ -138,191 +185,100 @@ impl<'a> IntcodeComp<'a> {
         ensure!(self.is_running(), "ERROR: Program is not running.");
         // self.check_ip(self.ip, format!("Cannot read command opcode"));
 
-        let (cmd, params) = self.parse_opcode(self.ip)?;
+        let cmd = Command::parse(self.prog[self.ip]).with_context(|| format!("ip={}", self.ip))?;
 
-        self.dump_cmd(&cmd, &params)?;
-
-        // self.check_ip(
-        //     self.ip + params.len() - 1,
-        //     format!(
-        //         "Not enough parameters for the command {:?} at position {}",
-        //         cmd, self.ip
-        //     ),
-        // )?;
+        self.log.println(format!(
+            "  Command[{}:{}]: {:?}",
+            self.ip, self.prog[self.ip], cmd
+        ));
 
         match cmd {
-            Command::Add => {
-                // ensure!(
-                //     params.len() == 3,
-                //     "ERROR: Expected 3 parameters in add command but was {}",
-                //     params.len()
-                // );
+            Command::Add(m1, m2, m3) => {
+                let v1 = self.get_param_value(1, m1)?;
+                let v2 = self.get_param_value(2, m2)?;
 
-                let v1 = self.get_param_value(1, params[0])?;
-                let v2 = self.get_param_value(2, params[1])?;
-
-                self.set_param_value(3, params[2], v1 + v2)?;
+                self.set_param_value(3, m3, v1 + v2)?;
+                self.ip += 3;
             }
-            Command::Mul => {
-                // ensure!(
-                //     params.len() == 3,
-                //     "ERROR: Expected 3 parameters in mul command but was {}",
-                //     params.len()
-                // );
+            Command::Mul(m1, m2, m3) => {
+                let v1 = self.get_param_value(1, m1)?;
+                let v2 = self.get_param_value(2, m2)?;
 
-                let v1 = self.get_param_value(1, params[0])?;
-                let v2 = self.get_param_value(2, params[1])?;
-
-                self.set_param_value(3, params[2], v1 * v2)?;
+                self.set_param_value(3, m3, v1 * v2)?;
+                self.ip += 3;
             }
-            Command::Read => {
-                // ensure!(
-                //     params.len() == 1,
-                //     "ERROR: Expected 1 parameters in read command but was {}",
-                //     params.len()
-                // );
+            Command::Read(m1) => {
                 ensure!(self.input.len() > 0, "ERROR: Input buffer is empty.");
 
                 let value = self.input.remove(0);
 
-                self.set_param_value(1, params[0], value)?;
+                self.set_param_value(1, m1, value)?;
+                self.ip += 1;
             }
-            Command::Write => {
-                // ensure!(
-                //     params.len() == 1,
-                //     "ERROR: Expected 1 parameters in write command but was {}",
-                //     params.len()
-                // );
-
-                *output = self.get_param_value(1, params[0])?;
+            Command::Write(m1) => {
+                *output = self.get_param_value(1, m1)?;
                 self.status = Status::Paused;
+                self.ip += 1;
             }
-            Command::JumpIfTrue => {
-                // ensure!(
-                //     params.len() == 2,
-                //     "ERROR: Expected 3 parameters in add command but was {}",
-                //     params.len()
-                // );
-
-                let v1 = self.get_param_value(1, params[0])?;
+            Command::JumpIfTrue(m1, m2) => {
+                let v1 = self.get_param_value(1, m1)?;
 
                 if v1 != 0 {
-                    self.ip = self.get_param_value(2, params[1])? as usize;
+                    let v2 = self.get_param_value(2, m2)?;
+                    self.ip = v2 as usize;
                     return Ok(true);
                 }
             }
-            Command::JumpIfFalse => {
-                // ensure!(
-                //     params.len() == 2,
-                //     "ERROR: Expected 3 parameters in add command but was {}",
-                //     params.len()
-                // );
-
-                let v1 = self.get_param_value(1, params[0])?;
+            Command::JumpIfFalse(m1, m2) => {
+                let v1 = self.get_param_value(1, m1)?;
 
                 if v1 == 0 {
-                    self.ip = self.get_param_value(2, params[1])? as usize;
+                    let v2 = self.get_param_value(2, m2)?;
+                    self.ip = v2 as usize;
                     return Ok(true);
                 }
             }
-            Command::LessThan => {
-                // ensure!(
-                //     params.len() == 3,
-                //     "ERROR: Expected 3 parameters in mul command but was {}",
-                //     params.len()
-                // );
+            Command::LessThan(m1, m2, m3) => {
+                let v1 = self.get_param_value(1, m1)?;
+                let v2 = self.get_param_value(2, m2)?;
 
-                let v1 = self.get_param_value(1, params[0])?;
-                let v2 = self.get_param_value(2, params[1])?;
-
-                self.set_param_value(3, params[2], if v1 < v2 { 1 } else { 0 })?;
+                self.set_param_value(3, m3, if v1 < v2 { 1 } else { 0 })?;
+                self.ip += 3;
             }
-            Command::Equals => {
-                // ensure!(
-                //     params.len() == 3,
-                //     "ERROR: Expected 3 parameters in mul command but was {}",
-                //     params.len()
-                // );
+            Command::Equals(m1, m2, m3) => {
+                let v1 = self.get_param_value(1, m1)?;
+                let v2 = self.get_param_value(2, m2)?;
 
-                let v1 = self.get_param_value(1, params[0])?;
-                let v2 = self.get_param_value(2, params[1])?;
-
-                self.set_param_value(3, params[2], if v1 == v2 { 1 } else { 0 })?;
+                self.set_param_value(3, m3, if v1 == v2 { 1 } else { 0 })?;
+                self.ip += 3;
             }
-            Command::AdjustRelBase => {
-                // ensure!(
-                //     params.len() == 1,
-                //     "ERROR: Expected 1 parameters in mul command but was {}",
-                //     params.len()
-                // );
-
-                let v1 = self.get_param_value(1, params[0])?;
+            Command::AdjustRelBase(m1) => {
+                let v1 = self.get_param_value(1, m1)?;
 
                 self.rel_base = self.rel_ip(v1);
+                self.log.println(format!("    rel_base={}", self.rel_base));
+                self.ip += 1;
             }
             Command::Exit => {
                 self.status = Status::Halted;
             }
         }
 
-        self.ip += params.len() + 1;
+        self.ip += 1;
 
         Ok(self.status == Status::Running)
     }
 
-    /// Returns command and its parameter modes
-    fn parse_opcode(&self, ip: usize) -> Result<(Command, Vec<ParamMode>)> {
-        self.check_ip(ip, format!("Cannot read opcode"))?;
-
-        let mut opc = self.prog[ip];
-        let cmd_id = match opc % 100 {
-            1 => Command::Add,
-            2 => Command::Mul,
-            3 => Command::Read,
-            4 => Command::Write,
-            5 => Command::JumpIfTrue,
-            6 => Command::JumpIfFalse,
-            7 => Command::LessThan,
-            8 => Command::Equals,
-            9 => Command::AdjustRelBase,
-            99 => Command::Exit,
-            _ => bail!("ERROR: Unknown command id {}. ip={}.", opc % 100, ip),
-        };
-        let mut params: Vec<ParamMode> = Vec::new();
-
-        opc /= 100;
-
-        let params_count = match cmd_id {
-            Command::Add | Command::Mul | Command::LessThan | Command::Equals => 3,
-            Command::Read | Command::Write | Command::AdjustRelBase => 1,
-            Command::JumpIfTrue | Command::JumpIfFalse => 2,
-            Command::Exit => 0,
-        };
-
-        for _i in 0..params_count {
-            let param_mode = match opc % 10 {
-                0 => ParamMode::Position,
-                1 => ParamMode::Immediate,
-                2 => ParamMode::Relative,
-                _ => bail!("ERROR: Unknown parameter mode {}", opc % 10),
-            };
-            params.push(param_mode);
-            opc /= 10;
-        }
-
-        Ok((cmd_id, params))
-    }
-
-    fn check_ip(&self, ip: usize, msg: String) -> Result<()> {
-        ensure!(
-            ip < self.prog.len(),
-            "ERROR: {}. Instruction pointer {} is out of program bound length {}.",
-            msg,
-            ip,
-            self.prog.len()
-        );
-        Ok(())
-    }
+    // fn check_ip(&self, ip: usize, msg: String) -> Result<()> {
+    //     ensure!(
+    //         ip < self.prog.len(),
+    //         "ERROR: {}. Instruction pointer {} is out of program bound length {}.",
+    //         msg,
+    //         ip,
+    //         self.prog.len()
+    //     );
+    //     Ok(())
+    // }
 
     fn check_and_extend(&mut self, ip: usize) {
         if ip >= self.prog.len() {
@@ -345,18 +301,17 @@ impl<'a> IntcodeComp<'a> {
             ParamMode::Position => {
                 let val_ip = self.prog[ip] as usize;
                 self.check_and_extend(val_ip);
-                // self.log.println(format!("  in: ip={}->{} value={}", ip, val_ip, self.prog[val_ip]));
+                self.log.println(format!("    in(pos): ip={}->{} value={}", ip, val_ip, self.prog[val_ip]));
                 self.prog[val_ip]
             }
             ParamMode::Immediate => {
-                // self.log.println(format!("  in: ip={} value={}", ip, self.prog[ip]));
+                self.log.println(format!("    in(imm): ip={} value={}", ip, self.prog[ip]));
                 self.prog[ip]
             }
             ParamMode::Relative => {
                 let val_ip = self.rel_ip(self.prog[ip]);
-                // self.log.print(format!("<val_ip={} rel_base={}>", val_ip, self.rel_base));
                 self.check_and_extend(val_ip);
-                // self.log.println(format!("  in: ip={}->{}+{} value={}", ip, val_ip, self.rel_base, self.prog[val_ip]));
+                self.log.println(format!("    in(rel): ip={}->{}(+{}) value={}", ip, val_ip, self.rel_base, self.prog[val_ip]));
                 self.prog[val_ip]
             }
         };
@@ -389,7 +344,7 @@ impl<'a> IntcodeComp<'a> {
         self.check_and_extend(val_ip as usize);
 
         self.prog[val_ip as usize] = value;
-        // self.log.println(format!("  out: ip={}->{} value={}", ip, val_ip, value));
+        self.log.println(format!("    out({:?}): ip={}->{} value={}", mode, ip, val_ip, value));
 
         Ok(())
     }

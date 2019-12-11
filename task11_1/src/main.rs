@@ -11,7 +11,7 @@ pub mod robot;
 pub mod utils;
 
 fn main() -> Result<()> {
-    let log = Log::new(true);
+    let log = Log::new(false);
     let file = File::open("input.txt")?;
     let reader = BufReader::new(file);
     let prog_str = reader

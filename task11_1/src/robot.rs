@@ -36,10 +36,9 @@ impl<'l> Robot<'l> {
     pub fn dump_grid(&self) {
         for row in &self.grid {
             for cell in row {
-                self.log
-                    .print(format!("{}", if *cell == 0 { "." } else { "#" }));
+                print!("{}", if *cell == 0 { "." } else { "#" });
             }
-            self.log.println("");
+            println!("");
         }
     }
 

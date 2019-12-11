@@ -26,7 +26,7 @@ fn main() -> Result<()> {
     let output = robot.run()?;
 
     robot.dump_grid();
-    println!("Output: {:?}", output);
+    println!("Plates painted: {:?}", output);
 
     Ok(())
 }

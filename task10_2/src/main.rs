@@ -50,9 +50,9 @@ struct QuadMap {
 
 impl QuadMap {
     fn new(origin: &PointU, size: &PointU) -> Self {
-        let mut quad_ne = Quadrant::new(origin, size, PointI::new( 1, -1));
-        let mut quad_se = Quadrant::new(origin, size, PointI::new( 1,  1));
-        let mut quad_sw = Quadrant::new(origin, size, PointI::new(-1,  1));
+        let mut quad_ne = Quadrant::new(origin, size, PointI::new(1, -1));
+        let mut quad_se = Quadrant::new(origin, size, PointI::new(1, 1));
+        let mut quad_sw = Quadrant::new(origin, size, PointI::new(-1, 1));
         let mut quad_nw = Quadrant::new(origin, size, PointI::new(-1, -1));
 
         quad_ne.sort();
@@ -95,7 +95,12 @@ impl QuadMap {
         result
     }
 
-    fn shoot_quad(&self, asteroids_map: &mut Vec<usize>, quad: &Quadrant, shoots: &mut Vec<PointU>) -> bool {
+    fn shoot_quad(
+        &self,
+        asteroids_map: &mut Vec<usize>,
+        quad: &Quadrant,
+        shoots: &mut Vec<PointU>,
+    ) -> bool {
         let mut keep_shooting = false;
 
         // println!("Shoot quad:");
@@ -243,7 +248,7 @@ impl Quadrant {
         // println!("Starting ray(dir={}):", start_dir);
         while (0..size.x).contains(&cell.x) && (0..size.y).contains(&cell.y) {
             // println!("  Cell: {}", cell);
-            
+
             result.process_cell(&cell, &origin);
 
             cell.x = (cell.x as isize + start_dir.x) as usize;
@@ -252,14 +257,14 @@ impl Quadrant {
 
         // fill quadrant rays
         cell.x = (origin.x as isize + dir.x) as usize;
-    
+
         // println!("Quad rays(dir={}):", dir);
         while (0..size.x).contains(&cell.x) {
             cell.y = (origin.y as isize + dir.y) as usize;
-            
+
             while (0..size.y).contains(&cell.y) {
                 // println!("  Cell: {}", cell);
-                
+
                 result.process_cell(&cell, &origin);
 
                 cell.y = (cell.y as isize + dir.y) as usize;
@@ -529,14 +534,18 @@ mod tests {
 
     #[test]
     fn test6() {
-        test_quad("NE", (1,  -1));
-        test_quad("SE", (1,   1));
-        test_quad("SW", (-1,  1));
+        test_quad("NE", (1, -1));
+        test_quad("SE", (1, 1));
+        test_quad("SW", (-1, 1));
         test_quad("NW", (-1, -1));
     }
 
     fn test_quad(name: &str, dir: (isize, isize)) {
-        let mut quad = Quadrant::new(&PointU::new(2, 2), &PointU::new(5, 5), PointI::new(dir.0, dir.1));
+        let mut quad = Quadrant::new(
+            &PointU::new(2, 2),
+            &PointU::new(5, 5),
+            PointI::new(dir.0, dir.1),
+        );
         quad.sort();
 
         println!("Quadrant[{}]: \n{}", name, quad);

@@ -18,14 +18,18 @@ fn main() -> Result<()> {
 fn process_image<S: AsRef<str>>(image: S, width: usize, height: usize) -> Result<u32> {
     let layer_size = width * height;
     let image_data = image.as_ref().as_bytes();
-    ensure!(image_data.len() % layer_size == 0, "ERROR: Image data is corrupted.");
+    ensure!(
+        image_data.len() % layer_size == 0,
+        "ERROR: Image data is corrupted."
+    );
 
     let layers_count = image_data.len() / layer_size;
     let mut digit0_min_count = std::u32::MAX;
     let mut min_layer_idx = 0;
 
     for i in 0..layers_count {
-        let digit0_count = get_digits_count(&image_data[(i * layer_size)..((i + 1) * layer_size)], 0);
+        let digit0_count =
+            get_digits_count(&image_data[(i * layer_size)..((i + 1) * layer_size)], 0);
         // println!("Layer: {}, zeros: {}", i, digit0_count);
 
         if digit0_count < digit0_min_count {

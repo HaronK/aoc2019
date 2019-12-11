@@ -13,7 +13,11 @@ fn main() -> Result<()> {
     println!("Result:");
     for r in 0..6 {
         let row = &result[(r * 25)..((r + 1) * 25)];
-        let row_str = row.iter().map(|p| if *p == 1 { "#" } else { " " }).collect::<Vec<&str>>().join("");
+        let row_str = row
+            .iter()
+            .map(|p| if *p == 1 { "#" } else { " " })
+            .collect::<Vec<&str>>()
+            .join("");
         println!("  {:?}", row_str);
     }
 
@@ -23,7 +27,10 @@ fn main() -> Result<()> {
 fn process_image<S: AsRef<str>>(image: S, width: usize, height: usize) -> Result<Vec<u8>> {
     let layer_size = width * height;
     let image_data: Vec<u8> = image.as_ref().as_bytes().iter().map(|p| p - 48).collect();
-    ensure!(image_data.len() % layer_size == 0, "ERROR: Image data is corrupted.");
+    ensure!(
+        image_data.len() % layer_size == 0,
+        "ERROR: Image data is corrupted."
+    );
 
     let mut result = vec![2; layer_size];
     let layers_count = image_data.len() / layer_size;

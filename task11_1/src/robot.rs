@@ -3,9 +3,9 @@ use crate::log::*;
 use crate::utils::*;
 use anyhow::{ensure, Result};
 use std::collections::HashMap;
-use termion;
-use std::{thread, time};
 use std::io::Write;
+use std::{thread, time};
+use termion;
 
 #[derive(Debug)]
 enum Direction {
@@ -63,7 +63,12 @@ impl<'l> Robot<'l> {
             buf += "\n";
         }
 
-        print!("{}{}{}", termion::clear::All, termion::cursor::Goto(1, 1), buf);
+        print!(
+            "{}{}{}",
+            termion::clear::All,
+            termion::cursor::Goto(1, 1),
+            buf
+        );
         std::io::stdout().flush().unwrap();
     }
 
@@ -114,7 +119,7 @@ impl<'l> Robot<'l> {
                 .println(format!("  Turn: {} New direction: {:?}", turn, self.dir));
 
             self.do_move();
-            
+
             steps += 1;
 
             thread::sleep(delay);

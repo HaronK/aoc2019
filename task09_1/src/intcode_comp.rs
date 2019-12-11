@@ -185,7 +185,8 @@ impl<'a> IntcodeComp<'a> {
         ensure!(self.is_running(), "ERROR: Program is not running.");
         // self.check_ip(self.ip, format!("Cannot read command opcode"));
 
-        let (cmd, params_count) = Command::parse(self.prog[self.ip]).with_context(|| format!("ip={}", self.ip))?;
+        let (cmd, params_count) =
+            Command::parse(self.prog[self.ip]).with_context(|| format!("ip={}", self.ip))?;
 
         self.log.println(format!(
             "  Command[{}:{}]: {:?}",
@@ -294,17 +295,24 @@ impl<'a> IntcodeComp<'a> {
             ParamMode::Position => {
                 let val_ip = self.prog[ip] as usize;
                 self.check_and_extend(val_ip);
-                self.log.println(format!("    in(pos): ip={}->{} value={}", ip, val_ip, self.prog[val_ip]));
+                self.log.println(format!(
+                    "    in(pos): ip={}->{} value={}",
+                    ip, val_ip, self.prog[val_ip]
+                ));
                 self.prog[val_ip]
             }
             ParamMode::Immediate => {
-                self.log.println(format!("    in(imm): ip={} value={}", ip, self.prog[ip]));
+                self.log
+                    .println(format!("    in(imm): ip={} value={}", ip, self.prog[ip]));
                 self.prog[ip]
             }
             ParamMode::Relative => {
                 let val_ip = self.rel_ip(self.prog[ip]);
                 self.check_and_extend(val_ip);
-                self.log.println(format!("    in(rel): ip={}->{}(+{}) value={}", ip, val_ip, self.rel_base, self.prog[val_ip]));
+                self.log.println(format!(
+                    "    in(rel): ip={}->{}(+{}) value={}",
+                    ip, val_ip, self.rel_base, self.prog[val_ip]
+                ));
                 self.prog[val_ip]
             }
         };
@@ -337,7 +345,10 @@ impl<'a> IntcodeComp<'a> {
         self.check_and_extend(val_ip as usize);
 
         self.prog[val_ip as usize] = value;
-        self.log.println(format!("    out({:?}): ip={}->{} value={}", mode, ip, val_ip, value));
+        self.log.println(format!(
+            "    out({:?}): ip={}->{} value={}",
+            mode, ip, val_ip, value
+        ));
 
         Ok(())
     }

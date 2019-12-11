@@ -326,11 +326,11 @@ impl<'a> IntcodeComp<'a> {
 
     fn check_and_extend(&mut self, ip: usize) {
         if ip >= self.prog.len() {
-            self.log.println(format!(
-                "    Extending program from {} to {} elements.",
-                self.prog.len(),
-                ip + 1
-            ));
+            // self.log.println(format!(
+            //     "    Extending program from {} to {} elements.",
+            //     self.prog.len(),
+            //     ip + 1
+            // ));
             self.prog.resize(ip + 1, 0);
         }
     }

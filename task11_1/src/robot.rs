@@ -3,6 +3,9 @@ use crate::log::*;
 use crate::utils::*;
 use anyhow::{ensure, Result};
 use std::collections::HashMap;
+use termion;
+use std::{thread, time};
+use std::io::Write;
 
 #[derive(Debug)]
 enum Direction {
@@ -34,17 +37,40 @@ impl<'l> Robot<'l> {
     }
 
     pub fn dump_grid(&self) {
-        for row in &self.grid {
-            for cell in row {
-                print!("{}", if *cell == 0 { "." } else { "#" });
+        let mut buf = String::new();
+        let abs_pos = self.abs_position();
+
+        for i in 0..self.grid.len() {
+            let row = &self.grid[i];
+            for j in 0..row.len() {
+                let cell = row[j];
+                let c = if cell == 0 {
+                    "░"
+                } else {
+                    if abs_pos.x == j && abs_pos.y == i {
+                        match self.dir {
+                            Direction::Up => "⇧",
+                            Direction::Down => "⇩",
+                            Direction::Left => "⇦",
+                            Direction::Right => "⇨",
+                        }
+                    } else {
+                        "█"
+                    }
+                };
+                buf += format!("{}", c).as_str();
             }
-            println!("");
+            buf += "\n";
         }
+
+        print!("{}{}{}", termion::clear::All, termion::cursor::Goto(1, 1), buf);
+        std::io::stdout().flush().unwrap();
     }
 
     pub fn run(&mut self) -> Result<usize> {
         let mut painted_panels = HashMap::new();
         let mut steps = 0;
+        let delay = time::Duration::from_millis(80);
 
         self.log.println("Robot start");
 
@@ -88,8 +114,11 @@ impl<'l> Robot<'l> {
                 .println(format!("  Turn: {} New direction: {:?}", turn, self.dir));
 
             self.do_move();
-
+            
             steps += 1;
+
+            thread::sleep(delay);
+            self.dump_grid();
         }
 
         self.log.println(format!("Steps: {}", steps));

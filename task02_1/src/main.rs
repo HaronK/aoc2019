@@ -30,8 +30,8 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn parse(commands: &String) -> Result<Vec<u32>> {
-    let cmd_str: Vec<&str> = commands.split(",").collect();
+fn parse(commands: &str) -> Result<Vec<u32>> {
+    let cmd_str: Vec<&str> = commands.split(',').collect();
     let mut prog: Vec<u32> = Vec::new();
     for cmd in cmd_str {
         prog.push(cmd.parse()?);
@@ -66,7 +66,7 @@ fn eval(prog: &mut Vec<u32>) -> Result<()> {
     Ok(())
 }
 
-fn get_cmd_params(ip: usize, prog: &Vec<u32>) -> Result<(usize, usize, usize)> {
+fn get_cmd_params(ip: usize, prog: &[u32]) -> Result<(usize, usize, usize)> {
     if ip + 3 >= prog.len() {
         bail!(
             "ERROR: Not enough parameters for the command {} at position {}. Prog len: {}.",

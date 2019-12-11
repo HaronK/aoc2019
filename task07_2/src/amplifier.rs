@@ -9,7 +9,7 @@ pub struct Amplifier<'a> {
 }
 
 impl<'a> Amplifier<'a> {
-    pub fn new(commands: &String, log: &'a Log) -> Result<Self> {
+    pub fn new(commands: &str, log: &'a Log) -> Result<Self> {
         let mut result = Self {
             prog: Vec::new(),
             comps: Vec::new(),
@@ -21,7 +21,7 @@ impl<'a> Amplifier<'a> {
         Ok(result)
     }
 
-    pub fn run(&mut self, phase_settings: &Vec<i32>) -> Result<i32> {
+    pub fn run(&mut self, phase_settings: &[i32]) -> Result<i32> {
         self.log.println(format!("Commands: {}", self.prog.len()));
         self.log.println(format!("Phases: {:?}", phase_settings));
 
@@ -51,8 +51,8 @@ impl<'a> Amplifier<'a> {
         Ok(result)
     }
 
-    fn parse(&mut self, commands: &String) -> Result<()> {
-        let cmd_str: Vec<&str> = commands.split(",").collect();
+    fn parse(&mut self, commands: &str) -> Result<()> {
+        let cmd_str: Vec<&str> = commands.split(',').collect();
         for cmd in cmd_str {
             self.prog.push(cmd.parse()?);
         }

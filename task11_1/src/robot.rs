@@ -40,25 +40,21 @@ impl<'l> Robot<'l> {
         let mut buf = String::new();
         let abs_pos = self.abs_position();
 
-        for i in 0..self.grid.len() {
-            let row = &self.grid[i];
-            for j in 0..row.len() {
-                let cell = row[j];
-                let c = if cell == 0 {
+        for (i, row) in self.grid.iter().enumerate() {
+            for (j, cell) in row.iter().enumerate() {
+                let c = if *cell == 0 {
                     "░"
-                } else {
-                    if abs_pos.x == j && abs_pos.y == i {
-                        match self.dir {
-                            Direction::Up => "⇧",
-                            Direction::Down => "⇩",
-                            Direction::Left => "⇦",
-                            Direction::Right => "⇨",
-                        }
-                    } else {
-                        "█"
+                } else if abs_pos.x == j && abs_pos.y == i {
+                    match self.dir {
+                        Direction::Up => "⇧",
+                        Direction::Down => "⇩",
+                        Direction::Left => "⇦",
+                        Direction::Right => "⇨",
                     }
+                } else {
+                    "█"
                 };
-                buf += format!("{}", c).as_str();
+                buf += c;
             }
             buf += "\n";
         }

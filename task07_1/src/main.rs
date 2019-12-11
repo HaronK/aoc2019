@@ -56,10 +56,10 @@ fn next_set(values: &mut Vec<i32>) -> bool {
 
     values.swap(i as usize, j as usize);
 
-    return true;
+    true
 }
 
-fn run_amplifier(prog_str: &String, phase_settings: &Vec<i32>) -> Result<i32> {
+fn run_amplifier(prog_str: &str, phase_settings: &[i32]) -> Result<i32> {
     let steps = phase_settings.len();
     ensure!(steps > 0, "ERROR: No phase settings are set.");
 

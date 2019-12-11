@@ -14,7 +14,7 @@ fn main() -> Result<()> {
             for verb in 0..100 {
                 let res = process(noun, verb, &commands)?;
 
-                if res == 19690720 {
+                if res == 19_690_720 {
                     println!("Result: {}", 100 * noun + verb);
                     break 'outer;
                 }
@@ -27,7 +27,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn process(noun: u32, verb: u32, commands: &String) -> Result<u32> {
+fn process(noun: u32, verb: u32, commands: &str) -> Result<u32> {
     let mut prog = parse(&commands)?;
     prog[1] = noun;
     prog[2] = verb;
@@ -37,8 +37,8 @@ fn process(noun: u32, verb: u32, commands: &String) -> Result<u32> {
     Ok(prog[0])
 }
 
-fn parse(commands: &String) -> Result<Vec<u32>> {
-    let cmd_str: Vec<&str> = commands.split(",").collect();
+fn parse(commands: &str) -> Result<Vec<u32>> {
+    let cmd_str: Vec<&str> = commands.split(',').collect();
     let mut prog: Vec<u32> = Vec::new();
     for cmd in cmd_str {
         prog.push(cmd.parse()?);
@@ -73,7 +73,7 @@ fn eval(prog: &mut Vec<u32>) -> Result<()> {
     Ok(())
 }
 
-fn get_cmd_params(ip: usize, prog: &Vec<u32>) -> Result<(usize, usize, usize)> {
+fn get_cmd_params(ip: usize, prog: &[u32]) -> Result<(usize, usize, usize)> {
     if ip + 3 >= prog.len() {
         bail!(
             "ERROR: Not enough parameters for the command {} at position {}. Prog len: {}.",

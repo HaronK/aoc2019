@@ -32,7 +32,7 @@ fn main() -> Result<()> {
 }
 
 fn parse_prog<S: AsRef<str>>(commands: S) -> Result<Vec<DataType>> {
-    let cmd_str: Vec<&str> = commands.as_ref().split(",").collect();
+    let cmd_str: Vec<&str> = commands.as_ref().split(',').collect();
     let mut prog: Vec<DataType> = Vec::new();
     for cmd in cmd_str {
         prog.push(cmd.parse()?);

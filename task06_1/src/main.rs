@@ -17,10 +17,10 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn parse(content: &String) -> Result<HashMap<String, String>> {
+fn parse(content: &str) -> Result<HashMap<String, String>> {
     let mut orbits = HashMap::new();
-    for line in content.split("\n") {
-        let orbit: Vec<&str> = line.trim().split(")").collect();
+    for line in content.split('\n') {
+        let orbit: Vec<&str> = line.trim().split(')').collect();
         ensure!(
             orbit.len() == 2,
             format!(
@@ -46,14 +46,14 @@ fn parse(content: &String) -> Result<HashMap<String, String>> {
 fn get_total_orbits(orbits: &HashMap<String, String>) -> Result<u32> {
     let mut result = 0;
 
-    for (_k, v) in orbits {
+    for v in orbits.values() {
         result += get_indirect_orbits(v, orbits)? + 1;
     }
 
     Ok(result)
 }
 
-fn get_indirect_orbits(object: &String, orbits: &HashMap<String, String>) -> Result<u32> {
+fn get_indirect_orbits(object: &str, orbits: &HashMap<String, String>) -> Result<u32> {
     let mut result = 0;
     let mut obj = object;
 

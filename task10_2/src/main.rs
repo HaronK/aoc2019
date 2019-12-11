@@ -1,13 +1,9 @@
-// use crate::log::*;
 use anyhow::{ensure, Result};
 use std::fmt;
 use std::fs::File;
 use std::io::prelude::*;
 
-// pub mod log;
-
 fn main() -> Result<()> {
-    // let log = Log::new(false);
     let mut content = String::new();
     let mut file = File::open("input.txt")?;
 
@@ -322,7 +318,7 @@ fn get_xy(idx: usize, xsize: usize) -> (usize, usize) {
     (idx % xsize, idx / xsize)
 }
 
-fn find_best_asteriod(map: &Vec<usize>, xsize: usize, _ysize: usize) -> (usize, usize, usize) {
+fn find_best_asteriod(map: &[usize], xsize: usize, _ysize: usize) -> (usize, usize, usize) {
     let mut result = 0;
     let mut result_x = 0;
     let mut result_y = 0;
@@ -384,25 +380,25 @@ fn gcd(mut v1: isize, mut v2: isize) -> isize {
     v2.abs()
 }
 
-fn dump_map(map: &Vec<usize>, xsize: usize, ysize: usize) {
-    for i in 0..ysize {
-        for j in 0..xsize {
-            let c = if map.contains(&get_idx(j, i, xsize)) {
-                "#"
-            } else {
-                "."
-            };
-            print!("{}", c);
-        }
-        println!("");
-    }
-}
+// fn dump_map(map: &[usize], xsize: usize, ysize: usize) {
+//     for i in 0..ysize {
+//         for j in 0..xsize {
+//             let c = if map.contains(&get_idx(j, i, xsize)) {
+//                 "#"
+//             } else {
+//                 "."
+//             };
+//             print!("{}", c);
+//         }
+//         println!();
+//     }
+// }
 
 fn parse_map<S: AsRef<str>>(map_str: S) -> Result<(Vec<usize>, usize, usize)> {
     let mut map = Vec::new();
 
     let map_rows: Vec<&str> = map_str.as_ref().lines().collect();
-    ensure!(map_rows.len() > 0, "ERROR: Map is empty.");
+    ensure!(!map_rows.is_empty(), "ERROR: Map is empty.");
 
     let first_row = map_rows[0].trim();
     let xsize = first_row.len();
@@ -410,8 +406,8 @@ fn parse_map<S: AsRef<str>>(map_str: S) -> Result<(Vec<usize>, usize, usize)> {
 
     parse_row(first_row, &mut map, ysize - 1);
 
-    for i in 1..map_rows.len() {
-        let row = map_rows[i].trim();
+    for r in map_rows.iter().skip(1) {
+        let row = r.trim();
         ensure!(
             xsize == row.len(),
             "ERROR: Wrong size of the row. Expected {} but was {}.",
@@ -429,12 +425,11 @@ fn parse_map<S: AsRef<str>>(map_str: S) -> Result<(Vec<usize>, usize, usize)> {
 fn parse_row<S: AsRef<str>>(row_str: S, map: &mut Vec<usize>, ypos: usize) {
     let row = row_str.as_ref();
     let xsize = row.len();
-    let mut x = 0;
-    for c in row.chars() {
+
+    for (i, c) in row.chars().enumerate() {
         if c == '#' {
-            map.push(ypos * xsize + x);
+            map.push(ypos * xsize + i);
         }
-        x += 1;
     }
 }
 

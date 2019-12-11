@@ -8,7 +8,7 @@ fn main() -> Result<()> {
 }
 
 fn pass_count(range: &str) -> Result<u32> {
-    let range_val_str: Vec<&str> = range.split("-").collect();
+    let range_val_str: Vec<&str> = range.split('-').collect();
     if range_val_str.len() != 2 {
         bail!(
             "ERROR: Expected 2 values of range data but got {}",
@@ -25,7 +25,7 @@ fn pass_count(range: &str) -> Result<u32> {
             r2
         );
     }
-    if r1 > 999999 || r2 > 999999 {
+    if r1 > 999_999 || r2 > 999_999 {
         bail!("ERROR: Only 6 digits numbers are allowed.");
     }
 

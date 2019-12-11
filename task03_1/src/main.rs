@@ -36,8 +36,8 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn parse(directions: &String) -> Result<Vec<DirectedLine>> {
-    let dir_str: Vec<&str> = directions.split(",").collect();
+fn parse(directions: &str) -> Result<Vec<DirectedLine>> {
+    let dir_str: Vec<&str> = directions.split(',').collect();
     let mut result: Vec<DirectedLine> = Vec::new();
     let mut x: i32 = 0;
     let mut y: i32 = 0;
@@ -74,17 +74,14 @@ fn parse(directions: &String) -> Result<Vec<DirectedLine>> {
     Ok(result)
 }
 
-fn closest_distance(wire1: &Vec<DirectedLine>, wire2: &Vec<DirectedLine>) -> i32 {
+fn closest_distance(wire1: &[DirectedLine], wire2: &[DirectedLine]) -> i32 {
     let mut dist = std::i32::MAX;
-    for i in 0..wire1.len() {
-        for j in 0..wire2.len() {
+    for (i, seg1) in wire1.iter().enumerate() {
+        for (j, seg2) in wire2.iter().enumerate() {
             // skip first segments check
             if i == 0 && j == 0 {
                 continue;
             }
-
-            let seg1 = &wire1[i];
-            let seg2 = &wire2[j];
 
             match seg1 {
                 DirectedLine::Up {

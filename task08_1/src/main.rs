@@ -15,7 +15,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn process_image<S: AsRef<str>>(image: S, width: usize, height: usize) -> Result<u32> {
+fn process_image<S: AsRef<str>>(image: S, width: usize, height: usize) -> Result<usize> {
     let layer_size = width * height;
     let image_data = image.as_ref().as_bytes();
     ensure!(
@@ -24,7 +24,7 @@ fn process_image<S: AsRef<str>>(image: S, width: usize, height: usize) -> Result
     );
 
     let layers_count = image_data.len() / layer_size;
-    let mut digit0_min_count = std::u32::MAX;
+    let mut digit0_min_count = std::usize::MAX;
     let mut min_layer_idx = 0;
 
     for i in 0..layers_count {
@@ -46,16 +46,8 @@ fn process_image<S: AsRef<str>>(image: S, width: usize, height: usize) -> Result
     Ok(digit1_count * digit2_count)
 }
 
-fn get_digits_count(layer: &[u8], digit: u8) -> u32 {
-    let mut result = 0;
-
-    for pixel in layer {
-        if *pixel - 48 == digit {
-            result += 1;
-        }
-    }
-
-    return result;
+fn get_digits_count(layer: &[u8], digit: u8) -> usize {
+    layer.iter().filter(|p| *p - 48 == digit).count()
 }
 
 #[cfg(test)]

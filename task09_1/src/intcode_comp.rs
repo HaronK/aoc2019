@@ -151,7 +151,7 @@ impl<'a> IntcodeComp<'a> {
             self.status
         );
 
-        let mut output = if self.input.len() > 0 {
+        let mut output = if !self.input.is_empty() {
             self.input[self.input.len() - 1]
         } else {
             0
@@ -163,7 +163,7 @@ impl<'a> IntcodeComp<'a> {
 
         while self.eval_cmd(&mut output)? {}
 
-        if self.input.len() > 0 {
+        if !self.input.is_empty() {
             self.log.println(format!(
                 "WARNING: Input buffer was not consumed completely. Remaining values: {:?}.",
                 self.input
@@ -207,7 +207,7 @@ impl<'a> IntcodeComp<'a> {
                 self.set_param_value(3, m3, v1 * v2)?;
             }
             Command::Read(m1) => {
-                ensure!(self.input.len() > 0, "ERROR: Input buffer is empty.");
+                ensure!(!self.input.is_empty(), "ERROR: Input buffer is empty.");
 
                 let value = self.input.remove(0);
 

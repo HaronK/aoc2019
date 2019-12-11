@@ -33,8 +33,8 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn parse_prog(commands: &String) -> Result<Vec<i32>> {
-    let cmd_str: Vec<&str> = commands.split(",").collect();
+fn parse_prog(commands: &str) -> Result<Vec<i32>> {
+    let cmd_str: Vec<&str> = commands.split(',').collect();
     let mut prog: Vec<i32> = Vec::new();
     for cmd in cmd_str {
         prog.push(cmd.parse()?);
@@ -188,11 +188,11 @@ fn check_ip(ip: usize, prog_len: usize, msg: String) -> Result<()> {
     Ok(())
 }
 
-fn get_param_value(param_ip: usize, mode: ParamMode, prog: &Vec<i32>) -> Result<i32> {
+fn get_param_value(param_ip: usize, mode: ParamMode, prog: &[i32]) -> Result<i32> {
     let value = match mode {
         ParamMode::Position => {
             let val_ip = prog[param_ip] as usize;
-            check_ip(val_ip, prog.len(), format!("Cannot read"))?;
+            check_ip(val_ip, prog.len(), "Cannot read".to_string())?;
             // println!("  in: ip={}->{} value={}", param_ip, val_ip, prog[val_ip]);
             prog[val_ip]
         }
@@ -206,9 +206,9 @@ fn get_param_value(param_ip: usize, mode: ParamMode, prog: &Vec<i32>) -> Result<
 }
 
 fn set_param_value(param_ip: usize, prog: &mut Vec<i32>, value: i32) -> Result<()> {
-    check_ip(param_ip, prog.len(), format!("Cannot store value"))?;
+    check_ip(param_ip, prog.len(), "Cannot store value".to_string())?;
     let val_ip = prog[param_ip] as usize;
-    check_ip(val_ip, prog.len(), format!("Cannot store value"))?;
+    check_ip(val_ip, prog.len(), "Cannot store value".to_string())?;
     prog[val_ip] = value;
     // println!("  out: ip={}->{} value={}", param_ip, val_ip, value);
     Ok(())

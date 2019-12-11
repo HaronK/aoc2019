@@ -17,10 +17,10 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn parse(content: &String) -> Result<HashMap<String, String>> {
+fn parse(content: &str) -> Result<HashMap<String, String>> {
     let mut orbits = HashMap::new();
-    for line in content.split("\n") {
-        let orbit: Vec<&str> = line.trim().split(")").collect();
+    for line in content.split('\n') {
+        let orbit: Vec<&str> = line.trim().split(')').collect();
         ensure!(
             orbit.len() == 2,
             "ERROR: Expected 2 objects per orbit but was {}.",
@@ -64,7 +64,7 @@ fn get_min_orbit_transfers(orbits: &HashMap<String, String>) -> Result<usize> {
     Ok(san_orbits.len() - i + you_orbits.len() - i)
 }
 
-fn get_indirect_orbits(object: &String, orbits: &HashMap<String, String>) -> Result<Vec<String>> {
+fn get_indirect_orbits(object: &str, orbits: &HashMap<String, String>) -> Result<Vec<String>> {
     let mut result = Vec::new();
     let mut obj = object;
 

@@ -26,7 +26,7 @@ pub struct IntcodeComp {
 }
 
 impl IntcodeComp {
-    pub fn new(commands: &String) -> Result<Self> {
+    pub fn new(commands: &str) -> Result<Self> {
         let mut result = Self {
             prog: Vec::new(),
             ip: 0,
@@ -47,11 +47,11 @@ impl IntcodeComp {
         while self.eval_cmd(&mut output)? {
             self.check_ip(
                 self.ip,
-                format!("Command evaluation produced wrong instruction pointer"),
+                "Command evaluation produced wrong instruction pointer".to_string(),
             )?;
         }
 
-        if self.input.len() > 0 {
+        if !self.input.is_empty() {
             println!(
                 "WARNING: Input buffer was not consumed completely. Remaining values: {:?}",
                 self.input
@@ -61,8 +61,8 @@ impl IntcodeComp {
         Ok(output)
     }
 
-    fn parse(&mut self, commands: &String) -> Result<()> {
-        let cmd_str: Vec<&str> = commands.split(",").collect();
+    fn parse(&mut self, commands: &str) -> Result<()> {
+        let cmd_str: Vec<&str> = commands.split(',').collect();
         for cmd in cmd_str {
             self.prog.push(cmd.parse()?);
         }
@@ -127,7 +127,7 @@ impl IntcodeComp {
                     params[0] == ParamMode::Position,
                     "ERROR: Destination parameter should be in position mode."
                 );
-                ensure!(self.input.len() > 0, "ERROR: Input buffer is empty.");
+                ensure!(!self.input.is_empty(), "ERROR: Input buffer is empty.");
 
                 let value = self.input.remove(0);
 
@@ -267,12 +267,12 @@ impl IntcodeComp {
     fn get_param_value(&self, param_offset: usize, mode: ParamMode) -> Result<i32> {
         let ip = self.ip + param_offset;
 
-        self.check_ip(ip, format!("Cannot read value"))?;
+        self.check_ip(ip, "Cannot read value".to_string())?;
 
         let value = match mode {
             ParamMode::Position => {
                 let val_ip = self.prog[ip] as usize;
-                self.check_ip(val_ip, format!("Cannot read"))?;
+                self.check_ip(val_ip, "Cannot read".to_string())?;
                 // println!("  in: ip={}->{} value={}", ip, val_ip, self.prog[val_ip]);
                 self.prog[val_ip]
             }
@@ -288,11 +288,11 @@ impl IntcodeComp {
     fn set_param_value(&mut self, param_offset: usize, value: i32) -> Result<()> {
         let ip = self.ip + param_offset;
 
-        self.check_ip(ip, format!("Cannot store value"))?;
+        self.check_ip(ip, "Cannot store value".to_string())?;
 
         let val_ip = self.prog[ip] as usize;
 
-        self.check_ip(val_ip, format!("Cannot store value"))?;
+        self.check_ip(val_ip, "Cannot store value".to_string())?;
 
         self.prog[val_ip] = value;
         // println!("  out: ip={}->{} value={}", ip, val_ip, value);

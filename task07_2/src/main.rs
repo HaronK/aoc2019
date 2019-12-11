@@ -61,7 +61,7 @@ fn next_set(values: &mut Vec<i32>) -> bool {
 
     values.swap(i as usize, j as usize);
 
-    return true;
+    true
 }
 
 #[cfg(test)]

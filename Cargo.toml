@@ -10,4 +10,5 @@ members = [
     "task08_1", "task08_2",
     "task09_1",
     "task10_1", "task10_2",
+    "task11_1",
 ]

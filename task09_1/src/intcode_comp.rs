@@ -16,47 +16,47 @@ enum Command {
 }
 
 impl Command {
-    fn parse(opc: DataType) -> Result<Self> {
+    fn parse(opc: DataType) -> Result<(Self, usize)> {
         let cmd_id = opc % 100;
         let params = opc / 100;
         let cmd = match cmd_id {
             1 => {
                 let params = ParamMode::parse(params, 3)?;
-                Command::Add(params[0], params[1], params[2])
+                (Command::Add(params[0], params[1], params[2]), 3)
             }
             2 => {
                 let params = ParamMode::parse(params, 3)?;
-                Command::Mul(params[0], params[1], params[2])
+                (Command::Mul(params[0], params[1], params[2]), 3)
             }
             3 => {
                 let params = ParamMode::parse(params, 1)?;
-                Command::Read(params[0])
+                (Command::Read(params[0]), 1)
             }
             4 => {
                 let params = ParamMode::parse(params, 1)?;
-                Command::Write(params[0])
+                (Command::Write(params[0]), 1)
             }
             5 => {
                 let params = ParamMode::parse(params, 2)?;
-                Command::JumpIfTrue(params[0], params[1])
+                (Command::JumpIfTrue(params[0], params[1]), 2)
             }
             6 => {
                 let params = ParamMode::parse(params, 2)?;
-                Command::JumpIfFalse(params[0], params[1])
+                (Command::JumpIfFalse(params[0], params[1]), 2)
             }
             7 => {
                 let params = ParamMode::parse(params, 3)?;
-                Command::LessThan(params[0], params[1], params[2])
+                (Command::LessThan(params[0], params[1], params[2]), 3)
             }
             8 => {
                 let params = ParamMode::parse(params, 3)?;
-                Command::Equals(params[0], params[1], params[2])
+                (Command::Equals(params[0], params[1], params[2]), 3)
             }
             9 => {
                 let params = ParamMode::parse(params, 1)?;
-                Command::AdjustRelBase(params[0])
+                (Command::AdjustRelBase(params[0]), 1)
             }
-            99 => Command::Exit,
+            99 => (Command::Exit, 0),
             _ => bail!("ERROR: Unknown command id {}.", opc % 100),
         };
 
@@ -185,7 +185,7 @@ impl<'a> IntcodeComp<'a> {
         ensure!(self.is_running(), "ERROR: Program is not running.");
         // self.check_ip(self.ip, format!("Cannot read command opcode"));
 
-        let cmd = Command::parse(self.prog[self.ip]).with_context(|| format!("ip={}", self.ip))?;
+        let (cmd, params_count) = Command::parse(self.prog[self.ip]).with_context(|| format!("ip={}", self.ip))?;
 
         self.log.println(format!(
             "  Command[{}:{}]: {:?}",
@@ -198,14 +198,12 @@ impl<'a> IntcodeComp<'a> {
                 let v2 = self.get_param_value(2, m2)?;
 
                 self.set_param_value(3, m3, v1 + v2)?;
-                self.ip += 3;
             }
             Command::Mul(m1, m2, m3) => {
                 let v1 = self.get_param_value(1, m1)?;
                 let v2 = self.get_param_value(2, m2)?;
 
                 self.set_param_value(3, m3, v1 * v2)?;
-                self.ip += 3;
             }
             Command::Read(m1) => {
                 ensure!(self.input.len() > 0, "ERROR: Input buffer is empty.");
@@ -213,12 +211,10 @@ impl<'a> IntcodeComp<'a> {
                 let value = self.input.remove(0);
 
                 self.set_param_value(1, m1, value)?;
-                self.ip += 1;
             }
             Command::Write(m1) => {
                 *output = self.get_param_value(1, m1)?;
                 self.status = Status::Paused;
-                self.ip += 1;
             }
             Command::JumpIfTrue(m1, m2) => {
                 let v1 = self.get_param_value(1, m1)?;
@@ -243,28 +239,25 @@ impl<'a> IntcodeComp<'a> {
                 let v2 = self.get_param_value(2, m2)?;
 
                 self.set_param_value(3, m3, if v1 < v2 { 1 } else { 0 })?;
-                self.ip += 3;
             }
             Command::Equals(m1, m2, m3) => {
                 let v1 = self.get_param_value(1, m1)?;
                 let v2 = self.get_param_value(2, m2)?;
 
                 self.set_param_value(3, m3, if v1 == v2 { 1 } else { 0 })?;
-                self.ip += 3;
             }
             Command::AdjustRelBase(m1) => {
                 let v1 = self.get_param_value(1, m1)?;
 
                 self.rel_base = self.rel_ip(v1);
                 self.log.println(format!("    rel_base={}", self.rel_base));
-                self.ip += 1;
             }
             Command::Exit => {
                 self.status = Status::Halted;
             }
         }
 
-        self.ip += 1;
+        self.ip += params_count + 1;
 
         Ok(self.status == Status::Running)
     }

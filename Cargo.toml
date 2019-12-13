@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "common",
     "task01_1", "task01_2",
     "task02_1", "task02_2",
     "task03_1", "task03_2",

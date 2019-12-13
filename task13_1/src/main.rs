@@ -1,13 +1,11 @@
 use crate::arcade::*;
-use crate::intcode_comp::*;
-use crate::log::*;
 use anyhow::{anyhow, Result};
+use common::intcode_comp::*;
+use common::log::*;
 use std::fs::File;
 use std::io::{prelude::*, BufReader};
 
 pub mod arcade;
-pub mod intcode_comp;
-pub mod log;
 
 fn main() -> Result<()> {
     let log = Log::new(false);

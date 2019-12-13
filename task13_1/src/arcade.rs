@@ -1,6 +1,6 @@
-use crate::intcode_comp::*;
-use crate::log::*;
 use anyhow::{bail, ensure, Result};
+use common::intcode_comp::*;
+use common::log::*;
 use std::io::Write;
 use std::{thread, time};
 use termion;

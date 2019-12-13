@@ -21,15 +21,14 @@ fn main() -> Result<()> {
     let prog = parse_prog(prog_str)?;
     println!("Prog len: {}", prog.len());
     log.println(format!("Prog: {:?}", prog));
-    let mut arcade = Arcade::new(prog, false, &log);
+    let mut arcade = Arcade::new(prog, true, &log);
 
     arcade.build_map()?;
-    println!(
-        "Blocks count: {:?}",
-        arcade.get_tiles_by_id(TileType::Block)
-    );
+    let blocks_count = arcade.get_tiles_by_id(TileType::Block);
 
     let score = arcade.run()?;
+
+    println!("Blocks count: {:?}", blocks_count);
     println!("Score: {}", score);
 
     Ok(())

@@ -1,6 +1,6 @@
 use crate::intcode_comp::*;
 use crate::log::*;
-use anyhow::{bail, Result};
+use anyhow::{bail, ensure, Result};
 use std::io::Write;
 use std::{thread, time};
 use termion;
@@ -85,19 +85,28 @@ impl<'l> Arcade<'l> {
     }
 
     pub fn build_map(&mut self) -> Result<()> {
-        let mut steps = 0;
-
         self.log.println("Arcade map start");
 
-        while !self.comp.is_halted() {
-            let x = self.comp.run()?;
+        self.comp.run()?;
+        ensure!(
+            self.comp.is_halted(),
+            "Intcomp should finish in the Halt state"
+        );
 
-            if self.comp.is_halted() {
-                break;
-            }
+        let output = self.comp.get_output();
+        ensure!(
+            output.len() % 3 == 0,
+            "Expected output to contain sequence of 3 elements but was {}",
+            output.len()
+        );
 
-            let y = self.comp.run()?;
-            let tile_id = self.comp.run()?;
+        self.log.println(format!("  Output: {:?}", output));
+
+        for i in 0..(output.len() / 3) {
+            let x = output[i * 3];
+            let y = output[i * 3 + 1];
+            let tile_id = output[i * 3 + 2];
+
             let tile = TileType::new(tile_id)?;
 
             if tile == TileType::Paddle {
@@ -108,23 +117,26 @@ impl<'l> Arcade<'l> {
                 .println(format!("  Tile[{}, {}]: {}", x, y, tile_id));
 
             self.set_tile(x as usize, y as usize, tile);
-
-            steps += 1;
         }
 
-        self.log.println(format!("Steps: {}", steps));
+        if self.visualize {
+            self.dump_screen();
+        }
+
+        self.log.println(format!(
+            "Map size: [{}, {}]",
+            self.screen[0].len(),
+            self.screen.len()
+        ));
 
         Ok(())
     }
 
     pub fn run(&mut self) -> Result<usize> {
-        let mut steps = 0;
-
         self.comp.set_mem(0, 2);
         self.comp.start();
 
         self.log.println("Arcade start");
-        steps = 0;
 
         let mut score = 0;
         let delay = time::Duration::from_millis(5);
@@ -132,33 +144,42 @@ impl<'l> Arcade<'l> {
         self.comp.add_input(0);
 
         while !self.comp.is_halted() {
+            self.comp.run()?;
 
-            let x = self.comp.run()?;
-            let y = self.comp.run()?;
-            let tile_id = self.comp.run()?;
+            let output = self.comp.get_output();
+            ensure!(
+                output.len() % 3 == 0,
+                "Expected output to contain sequence of 3 elements but was {}",
+                output.len()
+            );
 
-            if x == -1 && y == 0 {
-                score = tile_id as usize;
-            } else {
-                let tile = TileType::new(tile_id)?;
+            for i in 0..(output.len() / 3) {
+                let x = output[i * 3];
+                let y = output[i * 3 + 1];
 
-                if tile == TileType::Ball {
-                    let ball_pos = (x, y);
+                if x == -1 && y == 0 {
+                    score = output[i * 3 + 2] as usize;
+                } else {
+                    let tile = TileType::new(output[i * 3 + 2])?;
 
-                    let joystick = if ball_pos.0 < self.paddle_pos.0 {
-                        -1
-                    } else if ball_pos.0 > self.paddle_pos.0 {
-                        1
-                    } else {
-                        0
-                    };
+                    if tile == TileType::Ball {
+                        let ball_pos = (x, y);
 
-                    self.comp.add_input(joystick);
-                } else if tile == TileType::Paddle {
-                    self.paddle_pos = (x, y);
+                        let joystick = if ball_pos.0 < self.paddle_pos.0 {
+                            -1
+                        } else if ball_pos.0 > self.paddle_pos.0 {
+                            1
+                        } else {
+                            0
+                        };
+
+                        self.comp.add_input(joystick);
+                    } else if tile == TileType::Paddle {
+                        self.paddle_pos = (x, y);
+                    }
+
+                    self.set_tile(x as usize, y as usize, tile);
                 }
-
-                self.set_tile(x as usize, y as usize, tile);
             }
 
             if self.visualize {
@@ -166,11 +187,7 @@ impl<'l> Arcade<'l> {
                 self.dump_screen();
                 println!("          Score: {}", score);
             }
-
-            steps += 1;
         }
-
-        self.log.println(format!("Steps: {}", steps));
 
         Ok(score)
     }

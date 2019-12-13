@@ -92,7 +92,7 @@ impl ParamMode {
 #[derive(PartialEq, Debug)]
 enum Status {
     Running,
-    Paused,
+    WaitForInput,
     Halted,
 }
 
@@ -103,6 +103,7 @@ pub struct IntcodeComp<'l> {
     ip: usize,
     rel_base: usize,
     input: Vec<DataType>,
+    output: Vec<DataType>,
     status: Status,
     log: &'l Log,
 }
@@ -115,6 +116,7 @@ impl<'l> IntcodeComp<'l> {
             ip: 0,
             rel_base: 0,
             input: Vec::new(),
+            output: Vec::new(),
             status: Status::Running,
             log,
         }
@@ -140,14 +142,25 @@ impl<'l> IntcodeComp<'l> {
         self.input.push(input);
     }
 
+    pub fn get_output(&mut self) -> Vec<DataType> {
+        let output = self.output.clone();
+        self.output.clear();
+        output
+    }
+
     /// Run whole program and return outputs
-    pub fn exec(&mut self) -> Result<Vec<DataType>> {
-        let mut output = Vec::new();
-        while !self.is_halted() {
-            output.push(self.run()?);
+    pub fn exec(&mut self) -> Result<()> {
+        while self.is_running() {
+            self.run()?;
         }
-        output.pop();
-        Ok(output)
+
+        ensure!(
+            self.status == Status::Halted,
+            "Program was not finished properly. Status: {:?}",
+            self.status
+        );
+
+        Ok(())
     }
 
     pub fn set_mem(&mut self, addr: usize, value: DataType) {
@@ -155,8 +168,8 @@ impl<'l> IntcodeComp<'l> {
         self.prog[addr] = value;
     }
 
-    /// Run computer until next output
-    pub fn run(&mut self) -> Result<DataType> {
+    /// Run computer until next input
+    pub fn run(&mut self) -> Result<()> {
         ensure!(
             !self.is_halted(),
             "ERROR: Program was halted. ip={} status={:?}.",
@@ -164,17 +177,11 @@ impl<'l> IntcodeComp<'l> {
             self.status
         );
 
-        let mut output = if !self.input.is_empty() {
-            self.input[self.input.len() - 1]
-        } else {
-            0
-        };
-
         self.status = Status::Running;
 
         self.log.println(format!("    Input: {:?}", self.input));
 
-        while self.eval_cmd(&mut output)? {}
+        while self.eval_cmd()? {}
 
         if !self.input.is_empty() {
             self.log.println(format!(
@@ -183,10 +190,9 @@ impl<'l> IntcodeComp<'l> {
             ));
         }
 
-        self.log.println(format!("    Output: {}", output));
         self.log.println(format!("    Status: {:?}", self.status));
 
-        Ok(output)
+        Ok(())
     }
 
     fn rel_ip(&self, offset: DataType) -> usize {
@@ -194,7 +200,7 @@ impl<'l> IntcodeComp<'l> {
     }
 
     /// Returns false if execution should be stopped or paused
-    fn eval_cmd(&mut self, output: &mut DataType) -> Result<bool> {
+    fn eval_cmd(&mut self) -> Result<bool> {
         ensure!(self.is_running(), "ERROR: Program is not running.");
 
         let (cmd, params_count) =
@@ -219,15 +225,19 @@ impl<'l> IntcodeComp<'l> {
                 self.set_param_value(3, m3, v1 * v2)?;
             }
             Command::Read(m1) => {
-                ensure!(!self.input.is_empty(), "ERROR: Input buffer is empty.");
+                if self.input.is_empty() {
+                    self.status = Status::WaitForInput;
+                    self.log.println("    Waiting for input");
+                    return Ok(false);
+                }
 
                 let value = self.input.remove(0);
 
                 self.set_param_value(1, m1, value)?;
             }
             Command::Write(m1) => {
-                *output = self.get_param_value(1, m1)?;
-                self.status = Status::Paused;
+                let value = self.get_param_value(1, m1)?;
+                self.output.push(value);
             }
             Command::JumpIfTrue(m1, m2) => {
                 let v1 = self.get_param_value(1, m1)?;

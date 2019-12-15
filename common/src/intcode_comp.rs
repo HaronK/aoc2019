@@ -122,6 +122,15 @@ impl<'l> IntcodeComp<'l> {
         }
     }
 
+    pub fn load_prog(&mut self, data: &str) -> Result<()> {
+        let cmd_str: Vec<&str> = data.split(',').collect();
+        self.prog.clear();
+        for cmd in cmd_str {
+            self.prog.push(cmd.parse()?);
+        }
+        Ok(())
+    }
+
     pub fn start(&mut self) {
         self.status = Status::Running;
     }

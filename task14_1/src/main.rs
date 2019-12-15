@@ -14,7 +14,10 @@ struct Reaction {
 
 impl Reaction {
     fn new(quantity: QuantityType, chemicals: Chemicals) -> Self {
-        Self { quantity, chemicals }
+        Self {
+            quantity,
+            chemicals,
+        }
     }
 }
 
@@ -43,7 +46,11 @@ impl NanoFactory {
             let r_pair: Vec<&str> = r_str.split("=>").map(|c| c.trim()).collect();
             ensure!(r_pair.len() == 2, "Wrong reaction format: {}", r_str);
             ensure!(!r_pair[0].is_empty(), "Wrong chemicals format: {}", r_str);
-            ensure!(!r_pair[1].is_empty(), "Wrong resulting chemical format: {}", r_str);
+            ensure!(
+                !r_pair[1].is_empty(),
+                "Wrong resulting chemical format: {}",
+                r_str
+            );
 
             let res = NanoFactory::parse_chemical(r_pair[1])?;
             let ch_pairs: Vec<&str> = r_pair[0].split(',').map(|c| c.trim()).collect();
@@ -54,7 +61,8 @@ impl NanoFactory {
                 chemicals.insert(ch.0, ch.1);
             }
 
-            self.reactions.insert(res.0, Reaction::new(res.1, chemicals));
+            self.reactions
+                .insert(res.0, Reaction::new(res.1, chemicals));
         }
 
         Ok(())
@@ -93,7 +101,12 @@ impl NanoFactory {
                             react_count += 1;
                         }
 
-                        NanoFactory::add_chemical(&ch_name, react_count * min_quant, &mut resources);
+                        NanoFactory::add_chemical(
+                            &ch_name,
+                            react_count * min_quant,
+                            &mut resources,
+                        );
+
                         *st_remains = react_count * min_quant - req_quant;
 
                         for (ch_n, ch_q) in &self.reactions[&ch_name].chemicals {
@@ -117,7 +130,7 @@ impl NanoFactory {
     fn calc_fuel(&self, avail_ore: QuantityType) -> QuantityType {
         let ore_quant = self.calc_ore("FUEL", 1);
         let mut fuel_quant = avail_ore / ore_quant;
-    
+
         loop {
             let ore_q = self.calc_ore("FUEL", fuel_quant);
 
@@ -126,11 +139,7 @@ impl NanoFactory {
             }
 
             let extra_fuel = (avail_ore - ore_q) / ore_quant;
-            fuel_quant += if extra_fuel > 0 {
-                extra_fuel
-            } else {
-                1
-            };
+            fuel_quant += if extra_fuel > 0 { extra_fuel } else { 1 };
         }
 
         fuel_quant - 1

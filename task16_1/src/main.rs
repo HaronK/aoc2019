@@ -52,11 +52,11 @@ fn get_pattern(pos: usize, len: usize) -> Vec<PatternType> {
     pattern
 }
 
-fn apply_fft(phases: usize, input: &Vec<SignalType>) -> Vec<SignalType> {
-    let mut result = input.clone();
+fn apply_fft(phases: usize, input: &[SignalType]) -> Vec<SignalType> {
+    let mut result: Vec<SignalType> = input.iter().copied().collect();
     let len = input.len();
 
-    for p in 0..phases {
+    for _p in 0..phases {
         let mut buf = Vec::new();
 
         for i in 0..len {
@@ -93,27 +93,30 @@ mod tests {
 
     #[test]
     fn test2() {
-        assert_eq!(vec![0,1,0,2,9,4,9,8], apply_fft(4, &vec![1,2,3,4,5,6,7,8]));
+        assert_eq!(
+            vec![0, 1, 0, 2, 9, 4, 9, 8],
+            apply_fft(4, &vec![1, 2, 3, 4, 5, 6, 7, 8])
+        );
     }
 
     #[test]
     fn test3() -> Result<()> {
         let input = parse_signal("80871224585914546619083218645595")?;
-        assert_eq!([2,4,1,7,6,1,7,6], apply_fft(100, &input)[0..8]);
+        assert_eq!([2, 4, 1, 7, 6, 1, 7, 6], apply_fft(100, &input)[0..8]);
         Ok(())
     }
 
     #[test]
     fn test4() -> Result<()> {
         let input = parse_signal("19617804207202209144916044189917")?;
-        assert_eq!([7,3,7,4,5,4,1,8], apply_fft(100, &input)[0..8]);
+        assert_eq!([7, 3, 7, 4, 5, 4, 1, 8], apply_fft(100, &input)[0..8]);
         Ok(())
     }
 
     #[test]
     fn test5() -> Result<()> {
         let input = parse_signal("69317163492948606335995924319873")?;
-        assert_eq!([5,2,4,3,2,1,3,3], apply_fft(100, &input)[0..8]);
+        assert_eq!([5, 2, 4, 3, 2, 1, 3, 3], apply_fft(100, &input)[0..8]);
         Ok(())
     }
 }

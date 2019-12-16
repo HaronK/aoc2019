@@ -18,7 +18,11 @@ fn main() -> Result<()> {
     let mut droid = RepairDroid::new(&prog_str, &log)?;
 
     // droid.interactive()?;
-    droid.open_map(true)?;
+    droid.open_map(false)?;
+
+    let dist = droid.distance_to_oxygen(true)?;
+
+    println!("Oxygen dist: {}", dist);
 
     Ok(())
 }

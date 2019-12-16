@@ -2,6 +2,7 @@ use crate::point::*;
 use anyhow::Result;
 use std::io::Write;
 use termion;
+use termion::color;
 
 #[derive(Debug, Clone)]
 pub enum Direction {
@@ -59,10 +60,18 @@ impl<T> DynamicMap<T> {
         self.position.clone()
     }
 
+    pub fn offset(&self) -> PointU {
+        self.start_offset.clone()
+    }
+
     pub fn abs_position(&self) -> PointU {
+        self.get_abs_position(&self.position())
+    }
+
+    pub fn get_abs_position(&self, point: &PointI) -> PointU {
         PointU::new(
-            (self.position.x + self.start_offset.x as isize) as usize,
-            (self.position.y + self.start_offset.y as isize) as usize,
+            (point.x + self.start_offset.x as isize) as usize,
+            (point.y + self.start_offset.y as isize) as usize,
         )
     }
 
@@ -82,6 +91,10 @@ impl<T: Clone> DynamicMap<T> {
 }
 
 impl<T: Clone + Default> DynamicMap<T> {
+    pub fn get_cell_by_xy(&self, x: usize, y: usize) -> T {
+        self.map[y][x].clone()
+    }
+
     pub fn do_move(&mut self, dir: &Direction) -> T {
         match dir {
             Direction::North => self.move_north(),
@@ -146,12 +159,17 @@ impl<T: Clone + Default> DynamicMap<T> {
 
 impl<T: CellDisplay> DynamicMap<T> {
     pub fn show(&self, f: &mut dyn Write) -> Result<()> {
+        self.show_with_path(f, &Vec::new())
+    }
+
+    pub fn show_with_path(&self, f: &mut dyn Write, path: &Vec<(usize, usize)>) -> Result<()> {
         let mut buf = String::new();
         let abs_pos = self.abs_position();
 
         for (i, row) in self.map.iter().enumerate() {
             for (j, cell) in row.iter().enumerate() {
                 let mut cell_set = false;
+
                 if abs_pos.x == j && abs_pos.y == i {
                     if let Some(cur_char) = cell.current() {
                         buf.push(cur_char);
@@ -167,7 +185,11 @@ impl<T: CellDisplay> DynamicMap<T> {
                 }
 
                 if !cell_set {
-                    buf.push(cell.display());
+                    if path.iter().any(|&(x, y)| x == j && y == i) {
+                        buf += format!("{}{}", color::Bg(color::Blue), cell.display()).as_str();
+                    } else {
+                        buf += format!("{}{}", color::Bg(color::Black), cell.display()).as_str();
+                    }
                 }
             }
             buf.push('\n');

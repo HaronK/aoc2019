@@ -2,6 +2,8 @@ use anyhow::{bail, ensure, Result};
 use common::dynamic_map::*;
 use common::intcode_comp::*;
 use common::log::*;
+use common::point::*;
+use pathfinding::prelude::astar;
 use std::fmt;
 use std::io;
 use std::io::Write;
@@ -49,6 +51,15 @@ struct CellDirections {
     directions: Vec<Direction>,
 }
 
+impl CellDirections {
+    fn new(back_dir: Direction, directions: Vec<Direction>) -> Self {
+        Self {
+            back_dir,
+            directions,
+        }
+    }
+}
+
 impl fmt::Debug for CellDirections {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -59,19 +70,11 @@ impl fmt::Debug for CellDirections {
     }
 }
 
-impl CellDirections {
-    fn new(back_dir: Direction, directions: Vec<Direction>) -> Self {
-        Self {
-            back_dir,
-            directions,
-        }
-    }
-}
-
 pub struct RepairDroid<'l> {
     comp: IntcodeComp<'l>,
     map: DynamicMap<Cell>,
     visualize: bool,
+    oxygen_pos: PointU,
     log: &'l Log,
 }
 
@@ -83,20 +86,70 @@ impl<'l> RepairDroid<'l> {
             comp,
             map: DynamicMap::new(),
             visualize: false,
+            oxygen_pos: PointU::default(),
             log,
         };
         Ok(res)
     }
 
+    fn neighbors(&self, x: usize, y: usize) -> Vec<(usize, usize)> {
+        let mut result = Vec::new();
+
+        if self.map.get_cell_by_xy(x, y - 1) != Cell::Wall {
+            result.push((x, y - 1));
+        }
+
+        if self.map.get_cell_by_xy(x, y + 1) != Cell::Wall {
+            result.push((x, y + 1));
+        }
+
+        if self.map.get_cell_by_xy(x - 1, y) != Cell::Wall {
+            result.push((x - 1, y));
+        }
+
+        if self.map.get_cell_by_xy(x + 1, y) != Cell::Wall {
+            result.push((x + 1, y));
+        }
+
+        result
+    }
+
+    pub fn distance_to_oxygen(&mut self, visualize: bool) -> Result<isize> {
+        self.visualize = visualize;
+        let start_pos = self.map.abs_position();
+
+        let result = astar(
+            &(start_pos.x, start_pos.y),
+            |&(x, y)| self.neighbors(x, y).into_iter().map(|p| (p, 1)),
+            |&(x, y)| {
+                (x as isize - self.oxygen_pos.x as isize).abs()
+                    + (y as isize - self.oxygen_pos.y as isize).abs()
+            },
+            |&(x, y)| self.oxygen_pos.x == x && self.oxygen_pos.y == y,
+        );
+
+        if let Some((path, len)) = result {
+            self.show_with_path(&mut io::stdout(), &path)?;
+            // println!("Start pos: {:?}", start_pos);
+            // println!("Oxygen pos: {:?}", self.oxygen_pos);
+            // println!("Path[{}]: {:?}", path.len(), path);
+            Ok(len)
+        } else {
+            Ok(0)
+        }
+    }
+
     pub fn open_map(&mut self, visualize: bool) -> Result<()> {
-        let mut back_dir = Direction::North;
-        let mut route = Vec::new();
         let mut stdout = io::stdout();
-        let delay = time::Duration::from_millis(40);
+        let delay = time::Duration::from_millis(10);
 
         self.visualize = visualize;
 
         self.begin_show(&mut stdout)?;
+
+        let mut route = Vec::new();
+        let mut back_dir = Direction::North;
+        let mut oxygen_pos = PointI::default();
 
         loop {
             self.show(&mut stdout)?;
@@ -105,9 +158,15 @@ impl<'l> RepairDroid<'l> {
 
             // Are there yet unknown directions?
             if let Some(dir) = dirs.pop() {
+                let (cell, _) = self.do_move(&dir)?;
+
+                if cell == Cell::Oxygen {
+                    oxygen_pos = self.map.position();
+                }
+
                 let cell_dir = CellDirections::new(back_dir.clone(), dirs);
-                self.do_move(&dir)?;
                 back_dir = dir.opposite();
+
                 route.push(cell_dir);
             } else {
                 // Cannot move anywhere? Go back and try from there
@@ -115,12 +174,19 @@ impl<'l> RepairDroid<'l> {
 
                 while let Some(cell_dir) = &mut route.pop() {
                     if let Some(dir) = cell_dir.directions.pop() {
-                        self.do_move(&dir)?;
+                        let (cell, _) = self.do_move(&dir)?;
+
+                        if cell == Cell::Oxygen {
+                            oxygen_pos = self.map.position();
+                        }
+
                         back_dir = dir.opposite();
+
                         route.push(CellDirections::new(
                             cell_dir.back_dir.clone(),
                             cell_dir.directions.clone(),
                         ));
+
                         break;
                     } else {
                         // If there is no directions from the current cell then go back and try previous
@@ -138,6 +204,8 @@ impl<'l> RepairDroid<'l> {
                 thread::sleep(delay);
             }
         }
+
+        self.oxygen_pos = self.map.get_abs_position(&oxygen_pos);
 
         self.end_show(&mut stdout)?;
 
@@ -216,10 +284,14 @@ impl<'l> RepairDroid<'l> {
     }
 
     fn show(&self, f: &mut dyn io::Write) -> Result<()> {
+        self.show_with_path(f, &Vec::new())
+    }
+
+    fn show_with_path(&self, f: &mut dyn io::Write, path: &Vec<(usize, usize)>) -> Result<()> {
         if self.visualize {
             write!(f, "{}", termion::clear::All)?;
 
-            self.map.show(f)?;
+            self.map.show_with_path(f, path)?;
 
             // let (_, ys) = self.map.size();
             // write!(f, "{}Current cell: '{}'\n", termion::cursor::Goto(1, ys as u16 + 1), self.map.get_cell().display())?;

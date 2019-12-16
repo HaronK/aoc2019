@@ -10,3 +10,4 @@ edition = "2018"
 common = { path="../common" }
 anyhow = "1.0"
 termion = "1.5"
+pathfinding = "2.0"

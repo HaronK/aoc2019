@@ -162,7 +162,7 @@ impl<T: CellDisplay> DynamicMap<T> {
         self.show_with_path(f, &Vec::new())
     }
 
-    pub fn show_with_path(&self, f: &mut dyn Write, path: &Vec<(usize, usize)>) -> Result<()> {
+    pub fn show_with_path(&self, f: &mut dyn Write, path: &Vec<PointU>) -> Result<()> {
         let mut buf = String::new();
         let abs_pos = self.abs_position();
 
@@ -185,7 +185,7 @@ impl<T: CellDisplay> DynamicMap<T> {
                 }
 
                 if !cell_set {
-                    if path.iter().any(|&(x, y)| x == j && y == i) {
+                    if path.iter().any(|pos| pos.x == j && pos.y == i) {
                         buf += format!("{}{}", color::Bg(color::Blue), cell.display()).as_str();
                     } else {
                         buf += format!("{}{}", color::Bg(color::Black), cell.display()).as_str();

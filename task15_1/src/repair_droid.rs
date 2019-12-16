@@ -1,4 +1,4 @@
-use anyhow::{bail, ensure, Result};
+use anyhow::{anyhow, bail, ensure, Result};
 use common::dynamic_map::*;
 use common::intcode_comp::*;
 use common::log::*;
@@ -92,23 +92,23 @@ impl<'l> RepairDroid<'l> {
         Ok(res)
     }
 
-    fn neighbors(&self, x: usize, y: usize) -> Vec<(usize, usize)> {
+    fn neighbors(&self, pos: &PointU) -> Vec<PointU> {
         let mut result = Vec::new();
 
-        if self.map.get_cell_by_xy(x, y - 1) != Cell::Wall {
-            result.push((x, y - 1));
+        if self.map.get_cell_by_xy(pos.x, pos.y - 1) != Cell::Wall {
+            result.push(PointU::new(pos.x, pos.y - 1));
         }
 
-        if self.map.get_cell_by_xy(x, y + 1) != Cell::Wall {
-            result.push((x, y + 1));
+        if self.map.get_cell_by_xy(pos.x, pos.y + 1) != Cell::Wall {
+            result.push(PointU::new(pos.x, pos.y + 1));
         }
 
-        if self.map.get_cell_by_xy(x - 1, y) != Cell::Wall {
-            result.push((x - 1, y));
+        if self.map.get_cell_by_xy(pos.x - 1, pos.y) != Cell::Wall {
+            result.push(PointU::new(pos.x - 1, pos.y));
         }
 
-        if self.map.get_cell_by_xy(x + 1, y) != Cell::Wall {
-            result.push((x + 1, y));
+        if self.map.get_cell_by_xy(pos.x + 1, pos.y) != Cell::Wall {
+            result.push(PointU::new(pos.x + 1, pos.y));
         }
 
         result
@@ -116,27 +116,86 @@ impl<'l> RepairDroid<'l> {
 
     pub fn distance_to_oxygen(&mut self, visualize: bool) -> Result<isize> {
         self.visualize = visualize;
-        let start_pos = self.map.abs_position();
 
-        let result = astar(
-            &(start_pos.x, start_pos.y),
-            |&(x, y)| self.neighbors(x, y).into_iter().map(|p| (p, 1)),
-            |&(x, y)| {
-                (x as isize - self.oxygen_pos.x as isize).abs()
-                    + (y as isize - self.oxygen_pos.y as isize).abs()
-            },
-            |&(x, y)| self.oxygen_pos.x == x && self.oxygen_pos.y == y,
-        );
+        let start_pos = self.map.abs_position().clone();
+        let (path, dist) = self.distance_between(&start_pos, &self.oxygen_pos.clone())?;
 
-        if let Some((path, len)) = result {
-            self.show_with_path(&mut io::stdout(), &path)?;
-            // println!("Start pos: {:?}", start_pos);
-            // println!("Oxygen pos: {:?}", self.oxygen_pos);
-            // println!("Path[{}]: {:?}", path.len(), path);
-            Ok(len)
-        } else {
-            Ok(0)
+        self.show_with_path(&mut io::stdout(), &path)?;
+        // println!("Start pos: {:?}", start_pos);
+        // println!("End pos: {:?}", end_pos);
+        // println!("Path[{}]: {:?}", path.len(), path);
+        Ok(dist)
+    }
+
+    pub fn max_dist_from_oxygen2(&self) -> Result<isize> {
+        let mut max_dist = 0;
+        let mut edge_cells = vec![self.oxygen_pos.clone()];
+        let mut edge_cells2 = Vec::new();
+        let mut processed_cells = vec![self.oxygen_pos.clone()];
+
+        while !edge_cells.is_empty() {
+            while let Some(pos) = edge_cells.pop() {
+                let neighbors = self.neighbors(&pos);
+                for n in neighbors {
+                    if !processed_cells.iter().any(|pos| *pos == n) {
+                        edge_cells2.push(n.clone());
+                        processed_cells.push(n);
+                    }
+                }
+            }
+            edge_cells = edge_cells2.clone();
+            edge_cells2.clear();
+            max_dist += 1;
         }
+
+        Ok(max_dist)
+    }
+
+    pub fn max_dist_from_oxygen(&mut self, visualize: bool) -> Result<isize> {
+        self.visualize = visualize;
+
+        let mut max_dist = 0;
+        let mut max_path = Vec::new();
+        let start_pos = self.oxygen_pos.clone();
+
+        let (width, height) = self.map.size();
+        for i in 0..height {
+            for j in 0..width {
+                let cell = self.map.get_cell_by_xy(j, i);
+                if cell == Cell::Empty {
+                    let (path, dist) = self.distance_between(&start_pos, &PointU::new(j, i))?;
+
+                    if max_dist < dist {
+                        max_dist = dist;
+                        max_path = path;
+                    }
+                }
+            }
+        }
+
+        self.show_with_path(&mut io::stdout(), &max_path)?;
+        // println!("Start pos: {:?}", start_pos);
+        // println!("End pos: {:?}", end_pos);
+        // println!("Path[{}]: {:?}", path.len(), path);
+
+        Ok(max_dist + 1)
+    }
+
+    fn distance_between(
+        &mut self,
+        start_pos: &PointU,
+        end_pos: &PointU,
+    ) -> Result<(Vec<PointU>, isize)> {
+        Ok(astar(
+            start_pos,
+            |pos| self.neighbors(&pos).into_iter().map(|p| (p, 1)),
+            |pos| {
+                (pos.x as isize - end_pos.x as isize).abs()
+                    + (pos.y as isize - end_pos.y as isize).abs()
+            },
+            |pos| *end_pos == *pos,
+        )
+        .unwrap_or((Vec::new(), 0)))
     }
 
     pub fn open_map(&mut self, visualize: bool) -> Result<()> {
@@ -287,7 +346,7 @@ impl<'l> RepairDroid<'l> {
         self.show_with_path(f, &Vec::new())
     }
 
-    fn show_with_path(&self, f: &mut dyn io::Write, path: &Vec<(usize, usize)>) -> Result<()> {
+    fn show_with_path(&self, f: &mut dyn io::Write, path: &Vec<PointU>) -> Result<()> {
         if self.visualize {
             write!(f, "{}", termion::clear::All)?;
 

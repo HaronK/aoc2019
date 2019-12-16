@@ -20,9 +20,13 @@ fn main() -> Result<()> {
     // droid.interactive()?;
     droid.open_map(false)?;
 
-    let dist = droid.distance_to_oxygen(true)?;
+    let dist = droid.distance_to_oxygen(false)?;
+    // let max_dist = droid.max_dist_from_oxygen(false)?;
+    let max_dist2 = droid.max_dist_from_oxygen2()?;
 
     println!("Oxygen dist: {}", dist);
+    // println!("Filled with oxygen in: {} min", max_dist);
+    println!("Filled with oxygen in [2]: {} min", max_dist2);
 
     Ok(())
 }

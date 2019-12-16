@@ -1,4 +1,4 @@
-use anyhow::{anyhow, bail, ensure, Result};
+use anyhow::{bail, ensure, Result};
 use common::dynamic_map::*;
 use common::intcode_comp::*;
 use common::log::*;
@@ -84,7 +84,7 @@ impl<'l> RepairDroid<'l> {
         comp.load_prog(prog)?;
         let res = Self {
             comp,
-            map: DynamicMap::new(),
+            map: DynamicMap::default(),
             visualize: false,
             oxygen_pos: PointU::default(),
             log,
@@ -346,7 +346,7 @@ impl<'l> RepairDroid<'l> {
         self.show_with_path(f, &Vec::new())
     }
 
-    fn show_with_path(&self, f: &mut dyn io::Write, path: &Vec<PointU>) -> Result<()> {
+    fn show_with_path(&self, f: &mut dyn io::Write, path: &[PointU]) -> Result<()> {
         if self.visualize {
             write!(f, "{}", termion::clear::All)?;
 

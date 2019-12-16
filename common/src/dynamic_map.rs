@@ -35,20 +35,11 @@ pub trait CellDisplay {
     }
 }
 
+#[derive(Default)]
 pub struct DynamicMap<T> {
     map: Vec<Vec<T>>,
     start_offset: PointU,
     position: PointI,
-}
-
-impl<T: Default> DynamicMap<T> {
-    pub fn new() -> Self {
-        Self {
-            map: vec![vec![T::default()]],
-            start_offset: PointU::new(0, 0),
-            position: PointI::new(0, 0),
-        }
-    }
 }
 
 impl<T> DynamicMap<T> {
@@ -162,7 +153,7 @@ impl<T: CellDisplay> DynamicMap<T> {
         self.show_with_path(f, &Vec::new())
     }
 
-    pub fn show_with_path(&self, f: &mut dyn Write, path: &Vec<PointU>) -> Result<()> {
+    pub fn show_with_path(&self, _f: &mut dyn Write, path: &[PointU]) -> Result<()> {
         let mut buf = String::new();
         let abs_pos = self.abs_position();
 

@@ -26,12 +26,12 @@ impl From<DataType> for Cell {
     }
 }
 
-pub struct Camera<'l> {
+pub struct Robot<'l> {
     comp: IntcodeComp<'l>,
     map: DynamicMap<Cell>,
 }
 
-impl<'l> Camera<'l> {
+impl<'l> Robot<'l> {
     pub fn new(prog: &str, log: &'l Log) -> Result<Self> {
         let mut comp = IntcodeComp::new(Vec::new(), log);
         comp.load_prog(prog)?;
@@ -42,7 +42,7 @@ impl<'l> Camera<'l> {
         Ok(res)
     }
 
-    pub fn run(&mut self) -> Result<()> {
+    pub fn camera_scan(&mut self) -> Result<()> {
         self.comp.exec()?;
         ensure!(self.comp.is_halted(), "IntCode should be halted");
 
@@ -85,7 +85,44 @@ impl<'l> Camera<'l> {
         result
     }
 
+    pub fn wake_up(&mut self) {
+        self.comp.set_mem(0, 2);
+        self.comp.start();
+    }
+
+    pub fn move_robot(&mut self, routine: &str, func_a: &str, func_b: &str, func_c: &str) -> Result<DataType> {
+        self.comp.add_input_vec(&mut Self::str2input(routine));
+        self.comp.add_input_vec(&mut Self::str2input(func_a));
+        self.comp.add_input_vec(&mut Self::str2input(func_b));
+        self.comp.add_input_vec(&mut Self::str2input(func_c));
+        self.comp.add_input_vec(&mut Self::str2input("n"));
+
+        self.comp.exec()?;
+
+        let output = self.comp.get_output();
+
+        // println!("Output: {:?}", output);
+
+        // for c in output {
+        //     if c == 10 {
+        //         println!();
+        //     } else {
+        //         print!("{}", c as u8 as char);
+        //     }
+        // }
+
+        Ok(output[output.len() - 1])
+    }
+
     pub fn show(&self) -> Result<()> {
         self.map.show(&mut io::stdout())
+    }
+
+    fn str2input(data: &str) -> Vec<DataType> {
+        let mut result: Vec<DataType> = data.chars().map(|c| c as u8 as DataType).collect();
+
+        result.push(10);
+
+        result
     }
 }

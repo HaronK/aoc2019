@@ -42,6 +42,16 @@ pub struct DynamicMap<T> {
     position: PointI,
 }
 
+impl<T: Default> DynamicMap<T> {
+    pub fn new() -> Self {
+        Self {
+            map: vec![vec![T::default()]],
+            start_offset: PointU::default(),
+            position: PointI::default(),
+        }
+    }
+}
+
 impl<T> DynamicMap<T> {
     pub fn size(&self) -> (usize, usize) {
         (self.map[0].len(), self.map.len())
@@ -93,6 +103,11 @@ impl<T: Clone + Default> DynamicMap<T> {
             Direction::West => self.move_west(),
             Direction::East => self.move_east(),
         }
+    }
+
+    pub fn move_south_front(&mut self) {
+        self.move_south();
+        self.position.x = -(self.start_offset.x as isize);
     }
 
     fn move_north(&mut self) -> T {

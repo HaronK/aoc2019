@@ -151,6 +151,10 @@ impl<'l> IntcodeComp<'l> {
         self.input.push(input);
     }
 
+    pub fn add_input_vec(&mut self, mut input: &mut Vec<DataType>) {
+        self.input.append(&mut input);
+    }
+
     pub fn get_output(&mut self) -> Vec<DataType> {
         let output = self.output.clone();
         self.output.clear();

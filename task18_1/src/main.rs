@@ -17,9 +17,9 @@ fn main() -> Result<()> {
         .ok_or_else(|| anyhow!("ERROR: Cannot read program string."))??;
 
     let (map, pathes, start_pos, end_pos) = parse_map(&data)?;
-    let shortest_path = find_shortest_path(&map, &pathes, &start_pos, &end_pos)?;
+    let (dist, keys) = find_shortest_path(&map, &pathes, &start_pos, &end_pos)?;
 
-    println!("Shortest path: {:?}", shortest_path);
+    println!("Shortest path[{}]: {:?}", dist, keys);
 
     Ok(())
 }
@@ -151,75 +151,218 @@ fn build_path(map: &Vec<Vec<char>>, p1: &PointU, p2: &PointU) -> Result<Vec<Poin
     .unwrap_or((Vec::new(), 0)).0)
 }
 
-fn find_shortest_path(map: &Vec<Vec<char>>, kd_pathes: &HashMap<char, KeyDoorPath>, start_pos: &PointU, end_pos: &PointU) -> Result<usize> {
+fn find_shortest_path(map: &Vec<Vec<char>>, kd_pathes: &HashMap<char, KeyDoorPath>, start_pos: &PointU, end_pos: &PointU) -> Result<(usize, Vec<char>)> {
+    find_shortest_subpath(0, map, kd_pathes, start_pos, end_pos)
+}
+
+fn find_shortest_subpath(iter: usize, map: &Vec<Vec<char>>, kd_pathes: &HashMap<char, KeyDoorPath>, start_pos: &PointU, end_pos: &PointU) -> Result<(usize, Vec<char>)> {
     let mut result = 0;
     let mut cur_pos = start_pos.clone();
     let mut keys = Vec::new();
     let mut pathes = kd_pathes.clone();
+    let mut process_end_pos = true;
 
     loop {
-        // find first 'free' path: path that contains current position and doesn't contain any other doors
-        // if there are several such a pathes choose one with a closest distance between current position and door (check if there is a real reason to do this check)
-        // this can be possible in following situation:
-        //  A     b @   a   B
-        // let mut key_door_ch = ' ';
-        // 'p1: for (ch, path) in &pathes {
-        //     if path.contains(&cur_pos) {
-        //         for (ch1, path1) in &pathes {
-        //             if ch != ch1 && path.contains(&path1.door_pos) {
-        //                 continue 'p1;
-        //             }
-        //         }
-        //         key_door_ch = *ch;
-        //         break;
-        //     }
-        // }
+        let mut reachable_keys = get_reachable_keys(map, &pathes, &cur_pos)?;
+        ensure!(!reachable_keys.is_empty(), "[{}] There are no reachable keys", iter);
 
-        // // we can remove key-door record here because we get a key
-        // if let Some(key_door_path) = pathes.remove(&key_door_ch) {//.ok_or_else(|| anyhow!("Cannot find a key to pick up. Found keys: {:?}", keys))?;
-        //     result += key_door_path.dist_to_key(&cur_pos);
-        //     cur_pos = key_door_path.key_pos;
-        //     keys.push(key_door_ch);
-        // } else {
-            // if current position is now outside of key-door pairs find distance to closest key that is not blocked by any other door
+        println!("[{}] {:?} Reachable keys: {:?}", iter, cur_pos, reachable_keys);
+
+        if reachable_keys.len() == 1 {
+            let (ch, dist, _additional_keys) = reachable_keys.pop().unwrap();
+            let path = pathes.remove(&ch).unwrap();
+            println!("[{}] {}: {:?} {}", iter, ch, path.key_pos, dist);
+            result += dist;
+            cur_pos = path.key_pos;
+            keys.push(ch);
+        } else {
+            // More than 1 key is accessible. Find recursively the best to pick up first.
+            let mut closest_ch = ' ';
             let mut closest_dist = std::usize::MAX;
-            let mut closest_key_ch = ' ';
-            let mut closest_key_pos = PointU::default();
+            let mut closest_keys = Vec::new();
 
-            'p2: for (ch, path) in &pathes {
-                let cur_path = build_path(map, &cur_pos, &path.key_pos)?;
+            for (ch, dist, additional_keys) in reachable_keys {
+                println!("[{}] Try '{}' key path. Dist: {} ------------------", iter, ch, dist);
 
-                if closest_dist > cur_path.len() {
-                    for (ch1, path1) in &pathes {
-                        if cur_path.contains(&path1.door_pos) {
-                            continue 'p2;
-                        }
-                    }
-    
-                    closest_dist = cur_path.len();
-                    closest_key_ch = *ch;
-                    closest_key_pos = path.key_pos.clone();
+                let mut pathes_copy = pathes.clone();
+
+                let branch_path = pathes_copy.remove(&ch).unwrap();
+
+                for add_ch in &additional_keys {
+                    pathes_copy.remove(add_ch).unwrap();
+                }
+
+                let (branch_dist, mut branch_keys) = find_shortest_subpath(iter + 1, map, &pathes_copy, &branch_path.key_pos, end_pos)?;
+                println!("[{}] Dist: {} Path: {:?}", iter, branch_dist, branch_keys);
+
+                if closest_dist > branch_dist + dist {
+                    closest_ch = ch;
+                    closest_dist = branch_dist + dist;
+                    closest_keys = additional_keys;
+                    closest_keys.append(&mut branch_keys);
+                    println!("[{}] New min: {}", iter, closest_dist);
                 }
             }
 
-            println!(" {}: {:?} -> {:?} {}", closest_key_ch, cur_pos, closest_key_pos, closest_dist - 1);
-            pathes.remove(&closest_key_ch).unwrap();
-            result += closest_dist - 1;
-            cur_pos = closest_key_pos;
-            keys.push(closest_key_ch);
-        // }
+            result += closest_dist;
+            keys.push(closest_ch);
+            keys.append(&mut closest_keys);
+            process_end_pos = false;
+            break;
+        }
 
         if pathes.is_empty() {
-            println!("Keys pick order: {:?}", keys);
+            println!("[{}] Keys pick order: {:?}", iter, keys);
             break;
         }
     }
 
-    let end_path = build_path(map, &cur_pos, end_pos)?;
-    println!(" {}: {:?} -> {:?} {}", '+', cur_pos, end_pos, end_path.len() - 1);
-    result += end_path.len() - 1;
+    if process_end_pos {
+        let end_path = build_path(map, &cur_pos, end_pos)?;
+        println!("[{}] {}: {:?} -> {:?} {}", iter, '+', cur_pos, end_pos, end_path.len() - 1);
+        keys.push(map[end_pos.y][end_pos.x]);
+        result += end_path.len() - 1;
+    }
 
-    Ok(result)
+    println!("[{}] Result: {} Keys: {:?}", iter, result, keys);
+
+    Ok((result, keys))
+}
+
+// fn find_shortest_path(map: &Vec<Vec<char>>, kd_pathes: &HashMap<char, KeyDoorPath>, start_pos: &PointU, end_pos: &PointU) -> Result<usize> {
+//     let mut result = 0;
+//     let mut cur_pos = start_pos.clone();
+//     let mut keys = Vec::new();
+//     let mut pathes = kd_pathes.clone();
+//     let mut process_end_pos = true;
+
+//     loop {
+//         let mut reachable_keys = get_reachable_keys(map, &pathes, &cur_pos)?;
+//         ensure!(!reachable_keys.is_empty(), "There are no reachable keys");
+
+//         if reachable_keys.len() == 1 {
+//             let (ch, dist) = reachable_keys.pop().unwrap();
+//             let path = pathes.remove(&ch).unwrap();
+//             println!(" {}: {:?} -> {:?} {}", ch, cur_pos, path.key_pos, dist);
+//             result += dist;
+//             cur_pos = path.key_pos;
+//             keys.push(ch);
+//         } else {
+//             // More than 1 key is accessible. Find recursively the best to pick up first.
+//             let mut closest_dist = std::usize::MAX;
+//             let mut closest_keys = Vec::new();;
+
+//             for (ch, dist) in reachable_keys {
+//                 let mut pathes_copy = pathes.clone();
+//                 pathes.remove(&ch).unwrap();
+//                 ley (branch_dist, branch_keys) = find_shortest_subpath(map, &pathes, &cur_pos, end_pos)?;
+
+//                 if closest_dist < branch_dist {
+//                     closest_dist = branch_dist;
+//                     closest_keys = branch_keys;
+//                 }
+//             }
+
+//             result += closest_dist;
+//             keys.append(closest_keys);
+//             process_end_pos = false;
+//             break;
+//         }
+
+//         // // find first 'free' path: path that contains current position and doesn't contain any other doors
+//         // // if there are several such a pathes choose one with a closest distance between current position and door (check if there is a real reason to do this check)
+//         // // this can be possible in following situation:
+//         // //  A     b @   a   B
+//         // // let mut key_door_ch = ' ';
+//         // // 'p1: for (ch, path) in &pathes {
+//         // //     if path.contains(&cur_pos) {
+//         // //         for (ch1, path1) in &pathes {
+//         // //             if ch != ch1 && path.contains(&path1.door_pos) {
+//         // //                 continue 'p1;
+//         // //             }
+//         // //         }
+//         // //         key_door_ch = *ch;
+//         // //         break;
+//         // //     }
+//         // // }
+
+//         // // // we can remove key-door record here because we get a key
+//         // // if let Some(key_door_path) = pathes.remove(&key_door_ch) {//.ok_or_else(|| anyhow!("Cannot find a key to pick up. Found keys: {:?}", keys))?;
+//         // //     result += key_door_path.dist_to_key(&cur_pos);
+//         // //     cur_pos = key_door_path.key_pos;
+//         // //     keys.push(key_door_ch);
+//         // // } else {
+//         //     // if current position is now outside of key-door pairs find distance to closest key that is not blocked by any other door
+//         //     let mut closest_dist = std::usize::MAX;
+//         //     let mut closest_key_ch = ' ';
+//         //     let mut closest_key_pos = PointU::default();
+
+//         //     'p2: for (ch, path) in &pathes {
+//         //         let cur_path = build_path(map, &cur_pos, &path.key_pos)?;
+
+//         //         if closest_dist > cur_path.len() {
+//         //             for (ch1, path1) in &pathes {
+//         //                 if cur_path.contains(&path1.door_pos) {
+//         //                     continue 'p2;
+//         //                 }
+//         //             }
+    
+//         //             closest_dist = cur_path.len();
+//         //             closest_key_ch = *ch;
+//         //             closest_key_pos = path.key_pos.clone();
+//         //         }
+//         //     }
+
+//         //     println!(" {}: {:?} -> {:?} {}", closest_key_ch, cur_pos, closest_key_pos, closest_dist - 1);
+//         //     pathes.remove(&closest_key_ch).unwrap();
+//         //     result += closest_dist - 1;
+//         //     cur_pos = closest_key_pos;
+//         //     keys.push(closest_key_ch);
+//         // // }
+
+//         if pathes.is_empty() {
+//             println!("Keys pick order: {:?}", keys);
+//             break;
+//         }
+//     }
+
+//     if process_end_pos {
+//         let end_path = build_path(map, &cur_pos, end_pos)?;
+//         println!(" {}: {:?} -> {:?} {}", '+', cur_pos, end_pos, end_path.len() - 1);
+//         result += end_path.len() - 1;
+//     }
+
+//     Ok(result)
+// }
+
+/// Returns (key, distance to key, additional keys on a path)
+fn get_reachable_keys(map: &Vec<Vec<char>>, pathes: &HashMap<char, KeyDoorPath>, cur_pos: &PointU) -> Result<Vec<(char, usize, Vec<char>)>> {
+    let mut keys = Vec::new();
+
+    'p2: for (ch, path) in pathes {
+        let cur_path = build_path(map, cur_pos, &path.key_pos)?;
+
+        for (_ch1, path1) in pathes {
+            if cur_path.contains(&path1.door_pos) {
+                continue 'p2;
+            }
+        }
+
+        let mut additional_keys = Vec::new();
+
+        if cur_path.len() > 2 {
+            for i in 1..cur_path.len() - 1 {
+                let add_ch = map[cur_path[i].y][cur_path[i].x];
+                if *ch != add_ch && pathes.contains_key(&add_ch) {
+                    additional_keys.push(add_ch);
+                }
+            }
+        }
+
+        keys.push((*ch, cur_path.len() - 1, additional_keys));
+    }
+
+    Ok(keys)
 }
 
 #[cfg(test)]
@@ -230,6 +373,7 @@ mod tests {
     fn test1() -> Result<()> {
         common_test(
             8,
+            &vec!['a', 'b'],
             r#"#########
             #b.A.@.a#
             #########"#)
@@ -239,6 +383,7 @@ mod tests {
     fn test2() -> Result<()> {
         common_test(
             86,
+            &vec!['a', 'b', 'c', 'd', 'e', 'f'],
             r#"########################
             #f.D.E.e.C.b.A.@.a.B.c.#
             ######################.#
@@ -250,6 +395,7 @@ mod tests {
     fn test3() -> Result<()> {
         common_test(
             132,
+            &vec!['a', 'b', 'c', 'd', 'e', 'f'],
             r#"########################
             #...............b.C.D.f#
             #.######################
@@ -261,6 +407,7 @@ mod tests {
     fn test4() -> Result<()> {
         common_test(
             136,
+            &vec!['a', 'b', 'c', 'd', 'e', 'f'],
             r#"#################
             #i.G..c...e..H.p#
             ########.########
@@ -276,6 +423,7 @@ mod tests {
     fn test5() -> Result<()> {
         common_test(
             81,
+            &vec!['a', 'b', 'c', 'd', 'e', 'f'],
             r#"########################
             #@..............ac.GI.b#
             ###d#e#f################
@@ -284,9 +432,11 @@ mod tests {
             ########################"#)
     }
 
-    fn common_test(expected: usize, data: &str) -> Result<()> {
+    fn common_test(expected_dist: usize, expected_keys: &Vec<char>, data: &str) -> Result<()> {
         let (map, pathes, start_pos, end_pos) = parse_map(&data)?;
-        assert_eq!(expected, find_shortest_path(&map, &pathes, &start_pos, &end_pos)?);
+        let (dist, keys) = find_shortest_path(&map, &pathes, &start_pos, &end_pos)?;
+        assert_eq!(*expected_keys, keys);
+        assert_eq!(expected_dist, dist);
         Ok(())
     }
 }

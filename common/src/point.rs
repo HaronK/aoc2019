@@ -13,6 +13,11 @@ impl<T> Point<T> {
     pub fn new(x: T, y: T) -> Self {
         Self { x, y }
     }
+
+    pub fn set(&mut self, x: T, y: T) {
+        self.x = x;
+        self.y = y;
+    }
 }
 
 impl<T: Default> Default for Point<T> {

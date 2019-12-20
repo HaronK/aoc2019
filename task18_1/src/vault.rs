@@ -14,7 +14,7 @@ impl KeyInfo {
     fn to_single(&mut self) {
         *self = match std::mem::replace(self, Self::Single(Default::default())) {
             Self::WithDoor(path) => Self::Single(path.key_pos),
-            v => v
+            v => v,
         }
     }
 
@@ -82,7 +82,9 @@ impl fmt::Debug for Route {
         write!(
             f,
             "start_pos: {:?}, paths[{}]: {:?}",
-            self.start_pos, self.paths.len(), self.paths.keys()
+            self.start_pos,
+            self.paths.len(),
+            self.paths.keys()
         )?;
 
         // for path in &self.paths {
@@ -104,7 +106,7 @@ impl Route {
     fn remove_key(&mut self, key: char) -> Option<KeyInfo> {
         self.paths.remove(&key)
     }
-    
+
     fn format_nest(nest: usize, iter: usize) -> String {
         let mut res = String::from("");
         for _ in 0..nest {
@@ -114,11 +116,7 @@ impl Route {
         res
     }
 
-    fn find_shortest_path(
-        &mut self,
-        nest: usize,
-        map: &Map,
-    ) -> Result<(usize, Vec<char>)> {
+    fn find_shortest_path(&mut self, nest: usize, map: &Map) -> Result<(usize, Vec<char>)> {
         let mut result = 0;
         let mut cur_pos = self.start_pos.clone();
         let mut keys = Vec::new();
@@ -130,60 +128,88 @@ impl Route {
             let mut reachable_keys = self.get_reachable_keys(map, &cur_pos)?;
             // ensure!(!reachable_keys.is_empty(), "{} There are no reachable keys", format_nest(nest, iter));
             if reachable_keys.is_empty() {
-                println!("{} There are no reachable keys", Self::format_nest(nest, iter));
+                println!(
+                    "{} There are no reachable keys",
+                    Self::format_nest(nest, iter)
+                );
                 break;
             }
-    
+
             println!(
                 "{} {:?} Reachable keys: {:?}",
-                Self::format_nest(nest, iter), cur_pos, reachable_keys
+                Self::format_nest(nest, iter),
+                cur_pos,
+                reachable_keys
             );
-    
+
             if reachable_keys.len() == 1 {
                 let (ch, dist, additional_keys) = reachable_keys.pop().unwrap();
-                ensure!(additional_keys.is_empty(), "Path should not contain additional keys: {:?}", additional_keys);
+                ensure!(
+                    additional_keys.is_empty(),
+                    "Path should not contain additional keys: {:?}",
+                    additional_keys
+                );
 
                 let key_info = self.remove_key(ch).unwrap();
 
                 result += dist;
                 keys.push(ch);
                 cur_pos = key_info.key_pos();
-                println!("{} {}: {:?} {}", Self::format_nest(nest, iter), ch, cur_pos, dist);
+
+                println!(
+                    "{} {}: {:?} {}",
+                    Self::format_nest(nest, iter),
+                    ch,
+                    cur_pos,
+                    dist
+                );
             } else {
                 // More than 1 key is accessible. Find recursively the best to pick up first.
                 // let mut closest_ch = ' ';
                 let mut closest_dist = std::usize::MAX;
                 let mut closest_keys = Vec::new();
-    
+
                 for (ch, dist, additional_keys) in reachable_keys {
                     println!(
                         "{} Try '{}' key path. Dist: {} ------------------",
-                        Self::format_nest(nest, iter), ch, dist
+                        Self::format_nest(nest, iter),
+                        ch,
+                        dist
                     );
-    
+
                     let mut route_copy = self.clone();
-    
+
                     let branch_path = route_copy.remove_key(ch).unwrap();
 
                     route_copy.start_pos = branch_path.key_pos();
-    
+
                     for add_ch in &additional_keys {
                         route_copy.remove_key(*add_ch).unwrap();
                     }
-    
-                    let (branch_dist, mut branch_keys) = route_copy.find_shortest_path(
-                        nest + 1,
-                        map)?;
 
-                    println!("{} Dist[{}]: {}/{} Path: {:?}", Self::format_nest(nest, iter), ch, branch_dist, branch_dist + dist, branch_keys);
-    
+                    let (branch_dist, mut branch_keys) =
+                        route_copy.find_shortest_path(nest + 1, map)?;
+
+                    println!(
+                        "{} Dist[{}]: {}/{} Path: {:?}",
+                        Self::format_nest(nest, iter),
+                        ch,
+                        branch_dist,
+                        branch_dist + dist,
+                        branch_keys
+                    );
+
                     if closest_dist >= branch_dist + dist {
                         // closest_ch = ch;
                         closest_dist = branch_dist + dist;
 
                         println!(
                             "{} New min[{}]: {} {:?} {:?}",
-                            Self::format_nest(nest, iter), ch, closest_dist, additional_keys, branch_keys
+                            Self::format_nest(nest, iter),
+                            ch,
+                            closest_dist,
+                            additional_keys,
+                            branch_keys
                         );
 
                         closest_keys = additional_keys;
@@ -191,23 +217,32 @@ impl Route {
                         closest_keys.append(&mut branch_keys);
                     }
                 }
-    
+
                 result += closest_dist;
                 // keys.push(closest_ch);
                 keys.append(&mut closest_keys);
                 break;
             }
-    
+
             if self.paths.is_empty() {
-                println!("{} Keys pick order: {:?}", Self::format_nest(nest, iter), keys);
+                println!(
+                    "{} Keys pick order: {:?}",
+                    Self::format_nest(nest, iter),
+                    keys
+                );
                 break;
             }
 
             iter += 1;
         }
 
-        println!("{} Result: {} Keys: {:?}", Self::format_nest(nest, iter), result, keys);
-    
+        println!(
+            "{} Result: {} Keys: {:?}",
+            Self::format_nest(nest, iter),
+            result,
+            keys
+        );
+
         Ok((result, keys))
     }
 
@@ -234,7 +269,7 @@ impl Route {
             }
 
             let mut additional_keys = Vec::new();
-    
+
             if cur_path.len() > 2 {
                 for i in 1..cur_path.len() - 1 {
                     let add_ch = map.value(&cur_path[i]);
@@ -243,10 +278,10 @@ impl Route {
                     }
                 }
             }
-    
+
             keys.push((*ch, cur_path.len() - 1, additional_keys));
         }
-    
+
         Ok(keys)
     }
 }
@@ -257,9 +292,7 @@ pub struct Map {
 
 impl Map {
     fn new() -> Self {
-        Self {
-            map: Vec::new(),
-        }
+        Self { map: Vec::new() }
     }
 
     fn size(&self) -> PointU {
@@ -275,30 +308,30 @@ impl Map {
 
     fn neighbors(&self, pos: &PointU, barriers: &str) -> Vec<PointU> {
         let mut result = Vec::new();
-    
+
         let mut p1 = PointU::new(pos.x, pos.y - 1);
         if !barriers.contains(self.value(&p1)) {
             result.push(p1);
         }
-    
+
         p1 = PointU::new(pos.x, pos.y + 1);
         if !barriers.contains(self.value(&p1)) {
             result.push(p1);
         }
-    
+
         p1 = PointU::new(pos.x - 1, pos.y);
         if !barriers.contains(self.value(&p1)) {
             result.push(p1);
         }
-    
+
         p1 = PointU::new(pos.x + 1, pos.y);
         if !barriers.contains(self.value(&p1)) {
             result.push(p1);
         }
-    
+
         result
     }
-    
+
     fn build_path(&self, p1: &PointU, p2: &PointU) -> Result<Vec<PointU>> {
         let map_size = self.size();
 
@@ -314,7 +347,7 @@ impl Map {
             p2,
             map_size
         );
-    
+
         Ok(astar(
             p1,
             |pos| self.neighbors(&pos, "#").into_iter().map(|p| (p, 1)),
@@ -346,7 +379,7 @@ impl Vault {
     fn load_map(&mut self, data: &str) -> Result<()> {
         for line in data.lines() {
             let row = line.trim();
-    
+
             let map_size = self.map.size();
             if map_size.y > 0 {
                 ensure!(
@@ -362,8 +395,12 @@ impl Vault {
                     self.route.start_pos.set(x, map_size.y);
                 } else if c.is_alphabetic() {
                     let key = c.to_lowercase().to_string().chars().nth(0).unwrap();
-                    let key_info = self.route.paths.entry(key).or_insert(KeyInfo::WithDoor(KeyDoorPath::default()));
-    
+                    let key_info = self
+                        .route
+                        .paths
+                        .entry(key)
+                        .or_insert(KeyInfo::WithDoor(KeyDoorPath::default()));
+
                     if let KeyInfo::WithDoor(path) = key_info {
                         if c.is_lowercase() {
                             (*path).key_pos.set(x, map_size.y);
@@ -378,7 +415,7 @@ impl Vault {
 
             self.map.map.push(row.chars().collect());
         }
-    
+
         println!("Map: {:?}", self.map.size());
 
         // convert single keys
@@ -400,7 +437,7 @@ impl Vault {
                 println!("{}: {:?}", ch, path);
             }
         }
-    
+
         Ok(())
     }
 

@@ -1,23 +1,17 @@
 use crate::vault::*;
-use anyhow::{anyhow, ensure, Result};
-use common::point::*;
-use pathfinding::prelude::astar;
-use std::collections::HashMap;
-use std::fmt;
+use anyhow::Result;
 use std::fs::File;
-use std::io::{prelude::*, BufReader};
+use std::io::prelude::*;
 
 mod vault;
 
 fn main() -> Result<()> {
-    let file = File::open("input.txt")?;
-    let reader = BufReader::new(file);
-    let data = reader
-        .lines()
-        .nth(0)
-        .ok_or_else(|| anyhow!("ERROR: Cannot read program string."))??;
+    let mut content = String::new();
+    let mut file = File::open("input.txt")?;
 
-    let mut vault = Vault::new(&data)?;
+    file.read_to_string(&mut content)?;
+
+    let mut vault = Vault::new(&content)?;
     let (dist, keys) = vault.find_shortest_path()?;
 
     println!("Shortest path[{}]: {:?}", dist, keys);

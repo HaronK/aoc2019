@@ -3,6 +3,22 @@ use std::fmt;
 pub type PointI = Point<isize>;
 pub type PointU = Point<usize>;
 
+pub trait Max {
+    fn max() -> Self;
+}
+
+impl Max for isize {
+    fn max() -> Self {
+        std::isize::MAX
+    }
+}
+
+impl Max for usize {
+    fn max() -> Self {
+        std::usize::MAX
+    }
+}
+
 #[derive(PartialEq, Eq, Hash, Clone)]
 pub struct Point<T> {
     pub x: T,
@@ -17,6 +33,15 @@ impl<T> Point<T> {
     pub fn set(&mut self, x: T, y: T) {
         self.x = x;
         self.y = y;
+    }
+}
+
+impl<T: Max> Point<T> {
+    pub fn max() -> Self {
+        Self {
+            x: T::max(),
+            y: T::max(),
+        }
     }
 }
 

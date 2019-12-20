@@ -58,7 +58,13 @@ impl<'l> Drone<'l> {
         self.find_santa_common(100, 3, 7, &mut self.clone())
     }
 
-    pub fn find_santa_common(&mut self, size: usize, off_x: usize, off_y: usize, grid: &mut dyn Grid) -> Result<usize> {
+    pub fn find_santa_common(
+        &mut self,
+        size: usize,
+        off_x: usize,
+        off_y: usize,
+        grid: &mut dyn Grid,
+    ) -> Result<usize> {
         let mut result = 0;
         let mut start_pos = off_x;
         let mut rows = Vec::new();

@@ -140,7 +140,8 @@ impl<'l> IntcodeComp<'l> {
 
         self.prog = self.prog_backup.clone();
 
-        self.log.println(format!("=> Load prog. Size: {}", self.prog.len()));
+        self.log
+            .println(format!("=> Load prog. Size: {}", self.prog.len()));
 
         Ok(())
     }
@@ -223,7 +224,8 @@ impl<'l> IntcodeComp<'l> {
         if !self.input.is_empty() {
             self.log.println(format!(
                 "WARNING: Input buffer was not consumed completely. Remaining values[{}]: {:?}.",
-                self.input.len(), self.input
+                self.input.len(),
+                self.input
             ));
         }
 
@@ -353,17 +355,12 @@ impl<'l> IntcodeComp<'l> {
             ParamMode::Position => {
                 let val_ip = self.prog[ip] as usize;
                 self.check_and_extend(val_ip);
-                self.log.print(format!(
-                    " p[{}]->{}",
-                    val_ip, self.prog[val_ip]
-                ));
+                self.log
+                    .print(format!(" p[{}]->{}", val_ip, self.prog[val_ip]));
                 self.prog[val_ip]
             }
             ParamMode::Immediate => {
-                self.log.print(format!(
-                    " i[{}]",
-                    self.prog[ip]
-                ));
+                self.log.print(format!(" i[{}]", self.prog[ip]));
                 self.prog[ip]
             }
             ParamMode::Relative => {
@@ -397,7 +394,8 @@ impl<'l> IntcodeComp<'l> {
         self.check_and_extend(ip);
 
         let val_ip = if mode == ParamMode::Relative {
-            self.log.print(format!(" r[{}+{}]<-", self.prog[ip], self.rel_base));
+            self.log
+                .print(format!(" r[{}+{}]<-", self.prog[ip], self.rel_base));
             self.rel_ip(self.prog[ip])
         } else {
             self.log.print(format!(" p[{}]<-", self.prog[ip]));

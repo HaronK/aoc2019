@@ -72,11 +72,12 @@ impl<'l> Robot<'l> {
 
         for i in 1..size.1 - 1 {
             for j in 1..size.0 - 1 {
-                if self.map.get_cell_by_xy(j, i) == scaffold &&
-                self.map.get_cell_by_xy(j, i - 1) == scaffold &&
-                self.map.get_cell_by_xy(j, i + 1) == scaffold &&
-                self.map.get_cell_by_xy(j - 1, i) == scaffold &&
-                self.map.get_cell_by_xy(j + 1, i) == scaffold {
+                if self.map.get_cell_by_xy(j, i) == scaffold
+                    && self.map.get_cell_by_xy(j, i - 1) == scaffold
+                    && self.map.get_cell_by_xy(j, i + 1) == scaffold
+                    && self.map.get_cell_by_xy(j - 1, i) == scaffold
+                    && self.map.get_cell_by_xy(j + 1, i) == scaffold
+                {
                     result.push(PointU::new(j, i));
                 }
             }
@@ -90,7 +91,13 @@ impl<'l> Robot<'l> {
         self.comp.start();
     }
 
-    pub fn move_robot(&mut self, routine: &str, func_a: &str, func_b: &str, func_c: &str) -> Result<DataType> {
+    pub fn move_robot(
+        &mut self,
+        routine: &str,
+        func_a: &str,
+        func_b: &str,
+        func_c: &str,
+    ) -> Result<DataType> {
         self.comp.add_input_vec(&mut Self::str2input(routine));
         self.comp.add_input_vec(&mut Self::str2input(func_a));
         self.comp.add_input_vec(&mut Self::str2input(func_b));

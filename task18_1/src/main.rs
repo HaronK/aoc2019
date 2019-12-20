@@ -1,5 +1,5 @@
-use anyhow::{anyhow, ensure, Result};
 use crate::point::*;
+use anyhow::{anyhow, ensure, Result};
 use pathfinding::prelude::astar;
 use std::collections::HashMap;
 use std::fmt;
@@ -62,8 +62,14 @@ impl fmt::Debug for KeyDoorPath {
     }
 }
 
-
-fn parse_map(data: &str) -> Result<(Vec<Vec<char>>, HashMap<char, KeyDoorPath>, PointU, HashMap<char, PointU>)> {
+fn parse_map(
+    data: &str,
+) -> Result<(
+    Vec<Vec<char>>,
+    HashMap<char, KeyDoorPath>,
+    PointU,
+    HashMap<char, PointU>,
+)> {
     let mut map: Vec<Vec<char>> = Vec::new();
     let mut pathes = HashMap::new();
     let mut start_pos = PointU::new(std::usize::MAX, std::usize::MAX);
@@ -72,7 +78,12 @@ fn parse_map(data: &str) -> Result<(Vec<Vec<char>>, HashMap<char, KeyDoorPath>, 
         let row = line.trim();
 
         if !map.is_empty() {
-            ensure!(map[0].len() == row.len(), "Wrong row size. Expected {} but was {}", map[0].len(), row.len());
+            ensure!(
+                map[0].len() == row.len(),
+                "Wrong row size. Expected {} but was {}",
+                map[0].len(),
+                row.len()
+            );
         }
 
         for (i, c) in row.chars().enumerate() {
@@ -141,26 +152,47 @@ fn neighbors(map: &Vec<Vec<char>>, pos: &PointU, barriers: &str) -> Vec<PointU> 
 fn build_path(map: &Vec<Vec<char>>, p1: &PointU, p2: &PointU) -> Result<Vec<PointU>> {
     let height = map.len();
     let width = map[0].len();
-    ensure!(p1.x < width && p1.y < height, "Point is out of map. p1: {:?} > [{}, {}]", p1, width, height);
-    ensure!(p2.x < width && p2.y < height, "Point is out of map. p2: {:?} > [{}, {}]", p2, width, height);
+    ensure!(
+        p1.x < width && p1.y < height,
+        "Point is out of map. p1: {:?} > [{}, {}]",
+        p1,
+        width,
+        height
+    );
+    ensure!(
+        p2.x < width && p2.y < height,
+        "Point is out of map. p2: {:?} > [{}, {}]",
+        p2,
+        width,
+        height
+    );
 
     Ok(astar(
         p1,
         |pos| neighbors(map, &pos, "#").into_iter().map(|p| (p, 1)),
-        |pos| {
-            (pos.x as isize - p2.x as isize).abs()
-                + (pos.y as isize - p2.y as isize).abs()
-        },
+        |pos| (pos.x as isize - p2.x as isize).abs() + (pos.y as isize - p2.y as isize).abs(),
         |pos| *p2 == *pos,
     )
-    .unwrap_or((Vec::new(), 0)).0)
+    .unwrap_or((Vec::new(), 0))
+    .0)
 }
 
-fn find_shortest_path(map: &Vec<Vec<char>>, kd_pathes: &HashMap<char, KeyDoorPath>, start_pos: &PointU, free_keys: &HashMap<char, PointU>) -> Result<(usize, Vec<char>)> {
+fn find_shortest_path(
+    map: &Vec<Vec<char>>,
+    kd_pathes: &HashMap<char, KeyDoorPath>,
+    start_pos: &PointU,
+    free_keys: &HashMap<char, PointU>,
+) -> Result<(usize, Vec<char>)> {
     find_shortest_subpath(0, map, kd_pathes, start_pos, free_keys)
 }
 
-fn find_shortest_subpath(iter: usize, map: &Vec<Vec<char>>, kd_pathes: &HashMap<char, KeyDoorPath>, start_pos: &PointU, free_keys: &HashMap<char, PointU>) -> Result<(usize, Vec<char>)> {
+fn find_shortest_subpath(
+    iter: usize,
+    map: &Vec<Vec<char>>,
+    kd_pathes: &HashMap<char, KeyDoorPath>,
+    start_pos: &PointU,
+    free_keys: &HashMap<char, PointU>,
+) -> Result<(usize, Vec<char>)> {
     let mut result = 0;
     let mut cur_pos = start_pos.clone();
     let mut keys = Vec::new();
@@ -175,7 +207,10 @@ fn find_shortest_subpath(iter: usize, map: &Vec<Vec<char>>, kd_pathes: &HashMap<
             break;
         }
 
-        println!("[{}] {:?} Reachable keys: {:?}", iter, cur_pos, reachable_keys);
+        println!(
+            "[{}] {:?} Reachable keys: {:?}",
+            iter, cur_pos, reachable_keys
+        );
 
         if reachable_keys.len() == 1 {
             let (ch, dist, _additional_keys) = reachable_keys.pop().unwrap();
@@ -191,7 +226,10 @@ fn find_shortest_subpath(iter: usize, map: &Vec<Vec<char>>, kd_pathes: &HashMap<
             let mut closest_keys = Vec::new();
 
             for (ch, dist, additional_keys) in reachable_keys {
-                println!("[{}] Try '{}' key path. Dist: {} ------------------", iter, ch, dist);
+                println!(
+                    "[{}] Try '{}' key path. Dist: {} ------------------",
+                    iter, ch, dist
+                );
 
                 let mut pathes_copy = pathes.clone();
 
@@ -201,13 +239,22 @@ fn find_shortest_subpath(iter: usize, map: &Vec<Vec<char>>, kd_pathes: &HashMap<
                     pathes_copy.remove(add_ch).unwrap();
                 }
 
-                let (branch_dist, mut branch_keys) = find_shortest_subpath(iter + 1, map, &pathes_copy, &branch_path.key_pos, free_keys)?;
+                let (branch_dist, mut branch_keys) = find_shortest_subpath(
+                    iter + 1,
+                    map,
+                    &pathes_copy,
+                    &branch_path.key_pos,
+                    free_keys,
+                )?;
                 println!("[{}] Dist: {} Path: {:?}", iter, branch_dist, branch_keys);
 
                 if closest_dist > branch_dist + dist {
                     closest_ch = ch;
                     closest_dist = branch_dist + dist;
-                    println!("[{}] New min: {} {} {:?} {:?}", iter, closest_dist, ch, additional_keys, branch_keys);
+                    println!(
+                        "[{}] New min: {} {} {:?} {:?}",
+                        iter, closest_dist, ch, additional_keys, branch_keys
+                    );
                     closest_keys = additional_keys;
                     closest_keys.push(ch);
                     closest_keys.append(&mut branch_keys);
@@ -229,7 +276,14 @@ fn find_shortest_subpath(iter: usize, map: &Vec<Vec<char>>, kd_pathes: &HashMap<
 
     if process_free_keys {
         let end_path = build_path(map, &cur_pos, end_pos)?;
-        println!("[{}] {}: {:?} -> {:?} {}", iter, '+', cur_pos, end_pos, end_path.len() - 1);
+        println!(
+            "[{}] {}: {:?} -> {:?} {}",
+            iter,
+            '+',
+            cur_pos,
+            end_pos,
+            end_path.len() - 1
+        );
         keys.push(map[end_pos.y][end_pos.x]);
         result += end_path.len() - 1;
     }
@@ -239,12 +293,19 @@ fn find_shortest_subpath(iter: usize, map: &Vec<Vec<char>>, kd_pathes: &HashMap<
     Ok((result, keys))
 }
 
-fn find_closest_key(map: &Vec<Vec<char>>, cur_pos: &PointU, keys: &HashMap<char, PointU>) -> (char, Vec<PointU>) {
-    
+fn find_closest_key(
+    map: &Vec<Vec<char>>,
+    cur_pos: &PointU,
+    keys: &HashMap<char, PointU>,
+) -> (char, Vec<PointU>) {
 }
 
 /// Returns (key, distance to key, additional keys on a path)
-fn get_reachable_keys(map: &Vec<Vec<char>>, pathes: &HashMap<char, KeyDoorPath>, cur_pos: &PointU) -> Result<Vec<(char, usize, Vec<char>)>> {
+fn get_reachable_keys(
+    map: &Vec<Vec<char>>,
+    pathes: &HashMap<char, KeyDoorPath>,
+    cur_pos: &PointU,
+) -> Result<Vec<(char, usize, Vec<char>)>> {
     let mut keys = Vec::new();
 
     'p2: for (ch, path) in pathes {
@@ -284,7 +345,8 @@ mod tests {
             &vec!['a', 'b'],
             r#"#########
             #b.A.@.a#
-            #########"#)
+            #########"#,
+        )
     }
 
     #[test]
@@ -296,7 +358,8 @@ mod tests {
             #f.D.E.e.C.b.A.@.a.B.c.#
             ######################.#
             #d.....................#
-            ########################"#)
+            ########################"#,
+        )
     }
 
     #[test]
@@ -308,14 +371,17 @@ mod tests {
             #...............b.C.D.f#
             #.######################
             #.....@.a.B.c.d.A.e.F.g#
-            ########################"#)
+            ########################"#,
+        )
     }
 
     #[test]
     fn test4() -> Result<()> {
         common_test(
             136,
-            &vec!['a', 'f', 'b', 'j', 'g', 'n', 'h', 'd', 'l', 'o', 'e', 'p', 'c', 'i', 'k', 'm'],
+            &vec![
+                'a', 'f', 'b', 'j', 'g', 'n', 'h', 'd', 'l', 'o', 'e', 'p', 'c', 'i', 'k', 'm',
+            ],
             r#"#################
             #i.G..c...e..H.p#
             ########.########
@@ -324,7 +390,8 @@ mod tests {
             #k.E..a...g..B.n#
             ########.########
             #l.F..d...h..C.m#
-            #################"#)
+            #################"#,
+        )
     }
 
     #[test]
@@ -337,7 +404,8 @@ mod tests {
             ###d#e#f################
             ###A#B#C################
             ###g#h#i################
-            ########################"#)
+            ########################"#,
+        )
     }
 
     fn common_test(expected_dist: usize, expected_keys: &Vec<char>, data: &str) -> Result<()> {

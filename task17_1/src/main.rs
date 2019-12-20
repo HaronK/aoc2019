@@ -30,7 +30,12 @@ fn main() -> Result<()> {
 
     robot.wake_up();
 
-    let dust_count = robot.move_robot("A,A,B,C,C,A,B,C,A,B", "L,12,L,12,R,12", "L,8,L,8,R,12,L,8,L,8", "L,10,R,8,R,12")?;
+    let dust_count = robot.move_robot(
+        "A,A,B,C,C,A,B,C,A,B",
+        "L,12,L,12,R,12",
+        "L,8,L,8,R,12,L,8,L,8",
+        "L,10,R,8,R,12",
+    )?;
 
     println!("Dust count: {}", dust_count);
 

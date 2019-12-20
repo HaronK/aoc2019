@@ -89,7 +89,7 @@ impl ParamMode {
     }
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 enum Status {
     Running,
     WaitForInput,
@@ -98,6 +98,7 @@ enum Status {
 
 pub type DataType = i64;
 
+#[derive(Clone)]
 pub struct IntcodeComp<'l> {
     prog: Vec<DataType>,
     prog_backup: Vec<DataType>,
@@ -125,6 +126,10 @@ impl<'l> IntcodeComp<'l> {
     }
 
     pub fn load_prog(&mut self, data: &str) -> Result<()> {
+        if data.trim().is_empty() {
+            return Ok(());
+        }
+
         let cmd_str: Vec<&str> = data.split(',').collect();
 
         self.prog_backup.clear();

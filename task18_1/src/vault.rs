@@ -116,7 +116,7 @@ impl Route {
         res
     }
 
-    fn find_shortest_path(&mut self, nest: usize, map: &Map) -> Result<(usize, Vec<char>)> {
+    fn find_shortest_path(&mut self, nest: usize, map: &Map, cur_min: usize) -> Result<(usize, Vec<char>)> {
         let mut result = 0;
         let mut cur_pos = self.start_pos.clone();
         let mut keys = Vec::new();
@@ -136,9 +136,10 @@ impl Route {
             }
 
             println!(
-                "{} {:?} Reachable keys: {:?}",
+                "{} {:?} Reachable keys[{}]: {:?}",
                 Self::format_nest(nest, iter),
                 cur_pos,
+                reachable_keys.len(),
                 reachable_keys
             );
 
@@ -151,6 +152,19 @@ impl Route {
                 );
 
                 let key_info = self.remove_key(ch).unwrap();
+
+                if result + dist >= cur_min {
+                    // early exit
+                    println!(
+                        "{} {}: {} Early exit: {} > {}",
+                        Self::format_nest(nest, iter),
+                        ch,
+                        dist,
+                        result + dist,
+                        cur_min
+                    );
+                    return Ok((result + dist, keys));
+                }
 
                 result += dist;
                 keys.push(ch);
@@ -177,6 +191,19 @@ impl Route {
                         dist
                     );
 
+                    if result + dist >= cur_min {
+                        // early exit
+                        println!(
+                            "{} {}: {} Early exit: {} > {}",
+                            Self::format_nest(nest, iter),
+                            ch,
+                            dist,
+                            result + dist,
+                            cur_min
+                        );
+                        continue;
+                    }
+    
                     let mut route_copy = self.clone();
 
                     let branch_path = route_copy.remove_key(ch).unwrap();
@@ -188,7 +215,7 @@ impl Route {
                     }
 
                     let (branch_dist, mut branch_keys) =
-                        route_copy.find_shortest_path(nest + 1, map)?;
+                        route_copy.find_shortest_path(nest + 1, map, closest_dist)?;
 
                     println!(
                         "{} Dist[{}]: {}/{} Path: {:?}",
@@ -199,8 +226,7 @@ impl Route {
                         branch_keys
                     );
 
-                    if closest_dist >= branch_dist + dist {
-                        // closest_ch = ch;
+                    if closest_dist > branch_dist + dist {
                         closest_dist = branch_dist + dist;
 
                         println!(
@@ -218,9 +244,15 @@ impl Route {
                     }
                 }
 
-                result += closest_dist;
-                // keys.push(closest_ch);
-                keys.append(&mut closest_keys);
+                if closest_dist != std::usize::MAX {
+                    result += closest_dist;
+                    keys.append(&mut closest_keys);
+                } else if cur_min != std::usize::MAX {
+                    result = cur_min + 1;
+                } else {
+                    result = cur_min;
+                }
+
                 break;
             }
 
@@ -442,6 +474,6 @@ impl Vault {
     }
 
     pub fn find_shortest_path(&mut self) -> Result<(usize, Vec<char>)> {
-        self.route.find_shortest_path(0, &self.map)
+        self.route.find_shortest_path(0, &self.map, std::usize::MAX)
     }
 }

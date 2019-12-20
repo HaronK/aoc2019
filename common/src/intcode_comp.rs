@@ -57,7 +57,7 @@ impl Command {
                 (Command::AdjustRelBase(params[0]), 1)
             }
             99 => (Command::Exit, 0),
-            _ => bail!("ERROR: Unknown command id {}.", opc % 100),
+            _ => bail!("Unknown command id {}.", opc % 100),
         };
 
         Ok(cmd)
@@ -80,7 +80,7 @@ impl ParamMode {
                 0 => ParamMode::Position,
                 1 => ParamMode::Immediate,
                 2 => ParamMode::Relative,
-                _ => bail!("ERROR: Unknown parameter mode {}", opc % 10),
+                _ => bail!("Unknown parameter mode {}", opc % 10),
             };
             result.push(param_mode);
             opc /= 10;
@@ -100,6 +100,7 @@ pub type DataType = i64;
 
 pub struct IntcodeComp<'l> {
     prog: Vec<DataType>,
+    prog_backup: Vec<DataType>,
     ip: usize,
     rel_base: usize,
     input: Vec<DataType>,
@@ -110,9 +111,10 @@ pub struct IntcodeComp<'l> {
 
 impl<'l> IntcodeComp<'l> {
     pub fn new(prog: Vec<DataType>, log: &'l Log) -> Self {
-        log.println("    New comp");
+        log.println(format!("=> New comp. Size: {}", prog.len()));
         Self {
-            prog,
+            prog: prog.clone(),
+            prog_backup: prog,
             ip: 0,
             rel_base: 0,
             input: Vec::new(),
@@ -124,15 +126,32 @@ impl<'l> IntcodeComp<'l> {
 
     pub fn load_prog(&mut self, data: &str) -> Result<()> {
         let cmd_str: Vec<&str> = data.split(',').collect();
-        self.prog.clear();
+
+        self.prog_backup.clear();
+
         for cmd in cmd_str {
-            self.prog.push(cmd.parse()?);
+            self.prog_backup.push(cmd.parse()?);
         }
+
+        self.prog = self.prog_backup.clone();
+
+        self.log.println(format!("=> Load prog. Size: {}", self.prog.len()));
+
         Ok(())
     }
 
     pub fn start(&mut self) {
         self.status = Status::Running;
+    }
+
+    pub fn restart(&mut self) {
+        self.status = Status::Running;
+        self.ip = 0;
+    }
+
+    pub fn reset(&mut self) {
+        self.prog = self.prog_backup.clone();
+        self.restart();
     }
 
     pub fn is_running(&self) -> bool {
@@ -185,25 +204,25 @@ impl<'l> IntcodeComp<'l> {
     pub fn run(&mut self) -> Result<()> {
         ensure!(
             !self.is_halted(),
-            "ERROR: Program was halted. ip={} status={:?}.",
+            "Program was halted. ip={} status={:?}.",
             self.ip,
             self.status
         );
 
         self.status = Status::Running;
 
-        self.log.println(format!("    Input: {:?}", self.input));
+        self.log.println(format!("=> Input: {:?}", self.input));
 
         while self.eval_cmd()? {}
 
         if !self.input.is_empty() {
             self.log.println(format!(
-                "WARNING: Input buffer was not consumed completely. Remaining values: {:?}.",
-                self.input
+                "WARNING: Input buffer was not consumed completely. Remaining values[{}]: {:?}.",
+                self.input.len(), self.input
             ));
         }
 
-        self.log.println(format!("    Status: {:?}", self.status));
+        self.log.println(format!("=> Status: {:?}", self.status));
 
         Ok(())
     }
@@ -214,30 +233,30 @@ impl<'l> IntcodeComp<'l> {
 
     /// Returns false if execution should be stopped or paused
     fn eval_cmd(&mut self) -> Result<bool> {
-        ensure!(self.is_running(), "ERROR: Program is not running.");
+        ensure!(self.is_running(), "Program is not running.");
 
         let (cmd, params_count) =
             Command::parse(self.prog[self.ip]).with_context(|| format!("ip={}", self.ip))?;
 
-        self.log.println(format!(
-            "      Command[{}:{}]: {:?}",
-            self.ip, self.prog[self.ip], cmd
-        ));
+        self.log.print(format!("[{:4}] ", self.ip));
 
         match cmd {
             Command::Add(m1, m2, m3) => {
+                self.log.print("ADD");
                 let v1 = self.get_param_value(1, m1)?;
                 let v2 = self.get_param_value(2, m2)?;
 
                 self.set_param_value(3, m3, v1 + v2)?;
             }
             Command::Mul(m1, m2, m3) => {
+                self.log.print("MUL");
                 let v1 = self.get_param_value(1, m1)?;
                 let v2 = self.get_param_value(2, m2)?;
 
                 self.set_param_value(3, m3, v1 * v2)?;
             }
             Command::Read(m1) => {
+                self.log.print("GET");
                 if self.input.is_empty() {
                     self.status = Status::WaitForInput;
                     self.log.println("    Waiting for input");
@@ -249,49 +268,59 @@ impl<'l> IntcodeComp<'l> {
                 self.set_param_value(1, m1, value)?;
             }
             Command::Write(m1) => {
+                self.log.print("SET");
                 let value = self.get_param_value(1, m1)?;
                 self.output.push(value);
             }
             Command::JumpIfTrue(m1, m2) => {
+                self.log.print("JIT");
                 let v1 = self.get_param_value(1, m1)?;
 
                 if v1 != 0 {
                     let v2 = self.get_param_value(2, m2)?;
                     self.ip = v2 as usize;
+                    self.log.println("");
                     return Ok(true);
                 }
             }
             Command::JumpIfFalse(m1, m2) => {
+                self.log.print("JIF");
                 let v1 = self.get_param_value(1, m1)?;
 
                 if v1 == 0 {
                     let v2 = self.get_param_value(2, m2)?;
                     self.ip = v2 as usize;
+                    self.log.println("");
                     return Ok(true);
                 }
             }
             Command::LessThan(m1, m2, m3) => {
+                self.log.print(" LT");
                 let v1 = self.get_param_value(1, m1)?;
                 let v2 = self.get_param_value(2, m2)?;
 
                 self.set_param_value(3, m3, if v1 < v2 { 1 } else { 0 })?;
             }
             Command::Equals(m1, m2, m3) => {
+                self.log.print(" EQ");
                 let v1 = self.get_param_value(1, m1)?;
                 let v2 = self.get_param_value(2, m2)?;
 
                 self.set_param_value(3, m3, if v1 == v2 { 1 } else { 0 })?;
             }
             Command::AdjustRelBase(m1) => {
+                self.log.print("ARB");
                 let v1 = self.get_param_value(1, m1)?;
 
                 self.rel_base = self.rel_ip(v1);
-                self.log.println(format!("    rel_base={}", self.rel_base));
+                self.log.print(format!("->{}", self.rel_base));
             }
             Command::Exit => {
+                self.log.print("EXIT");
                 self.status = Status::Halted;
             }
         }
+        self.log.println("");
 
         self.ip += params_count + 1;
 
@@ -319,25 +348,25 @@ impl<'l> IntcodeComp<'l> {
             ParamMode::Position => {
                 let val_ip = self.prog[ip] as usize;
                 self.check_and_extend(val_ip);
-                self.log.println(format!(
-                    "        in(pos): ip={}->{} value={}",
-                    ip, val_ip, self.prog[val_ip]
+                self.log.print(format!(
+                    " p[{}]->{}",
+                    val_ip, self.prog[val_ip]
                 ));
                 self.prog[val_ip]
             }
             ParamMode::Immediate => {
-                self.log.println(format!(
-                    "        in(imm): ip={} value={}",
-                    ip, self.prog[ip]
+                self.log.print(format!(
+                    " i[{}]",
+                    self.prog[ip]
                 ));
                 self.prog[ip]
             }
             ParamMode::Relative => {
                 let val_ip = self.rel_ip(self.prog[ip]);
                 self.check_and_extend(val_ip);
-                self.log.println(format!(
-                    "        in(rel): ip={}->{}(+{}) value={}",
-                    ip, val_ip, self.rel_base, self.prog[val_ip]
+                self.log.print(format!(
+                    " r[{}+{}]->{}",
+                    self.prog[ip], self.rel_base, self.prog[val_ip]
                 ));
                 self.prog[val_ip]
             }
@@ -354,7 +383,7 @@ impl<'l> IntcodeComp<'l> {
     ) -> Result<()> {
         ensure!(
             mode == ParamMode::Position || mode == ParamMode::Relative,
-            "ERROR: Wrong destination parameter. Expected Position or Relative but was {:?}.",
+            "Wrong destination parameter. Expected Position or Relative but was {:?}.",
             mode
         );
 
@@ -363,18 +392,17 @@ impl<'l> IntcodeComp<'l> {
         self.check_and_extend(ip);
 
         let val_ip = if mode == ParamMode::Relative {
+            self.log.print(format!(" r[{}+{}]<-", self.prog[ip], self.rel_base));
             self.rel_ip(self.prog[ip])
         } else {
+            self.log.print(format!(" p[{}]<-", self.prog[ip]));
             self.prog[ip] as usize
         };
+        self.log.print(format!("{}", value));
 
         self.check_and_extend(val_ip as usize);
 
         self.prog[val_ip as usize] = value;
-        self.log.println(format!(
-            "        out({:?}): ip={}->{} value={}",
-            mode, ip, val_ip, value
-        ));
 
         Ok(())
     }

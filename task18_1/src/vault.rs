@@ -175,15 +175,15 @@ impl Route {
                         nest + 1,
                         map)?;
 
-                        println!("{} Dist: {} Path: {:?}", Self::format_nest(nest, iter), branch_dist, branch_keys);
+                    println!("{} Dist[{}]: {}/{} Path: {:?}", Self::format_nest(nest, iter), ch, branch_dist, branch_dist + dist, branch_keys);
     
-                    if closest_dist > branch_dist + dist {
+                    if closest_dist >= branch_dist + dist {
                         // closest_ch = ch;
                         closest_dist = branch_dist + dist;
 
                         println!(
-                            "{} New min: {} {} {:?} {:?}",
-                            Self::format_nest(nest, iter), closest_dist, ch, additional_keys, branch_keys
+                            "{} New min[{}]: {} {:?} {:?}",
+                            Self::format_nest(nest, iter), ch, closest_dist, additional_keys, branch_keys
                         );
 
                         closest_keys = additional_keys;

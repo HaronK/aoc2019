@@ -429,8 +429,14 @@ impl Maze {
 
             let cell = self.map.cell(&pos);
             match cell {
-                Cell::Exit(id) => println!(" Exit {}", id),
-                Cell::Teleport(id, dest, side) => println!(" Teleport {} {:?} {:?}", id, dest, side),
+                Cell::Exit(id) => {
+                    let name = self.map.get_anomaly_name(*id);
+                    println!(" Exit {} {}", id, name);
+                }
+                Cell::Teleport(id, dest, side) => {
+                    let name = self.map.get_anomaly_name(*id);
+                    println!(" Teleport {} {} {:?} {:?}", id, name, dest, side);
+                }
                 _ => println!(),
             }
         }

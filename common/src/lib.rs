@@ -1,3 +1,4 @@
+pub mod color_text;
 pub mod dynamic_map;
 pub mod intcode_comp;
 pub mod log;

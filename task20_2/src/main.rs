@@ -11,7 +11,7 @@ fn main() -> Result<()> {
 
     // maze.dump_map();
 
-    let dist = maze.find_shortest_path(true)?;
+    let dist = maze.find_shortest_path(false)?;
 
     println!("Shortest dist: {}", dist);
 
@@ -40,7 +40,7 @@ mod tests {
         let content = get_file_content(path)?;
         let maze = Maze::new(&content)?;
 
-        maze.dump_map();
+        // maze.dump_map();
 
         let dist = maze.find_shortest_path(true)?;
 

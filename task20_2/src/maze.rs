@@ -1,13 +1,12 @@
-use anyhow::{ensure, Result};
+use anyhow::{bail, ensure, Result};
 use common::color_text::*;
 use common::point::*;
-use pathfinding::prelude::astar;
+use pathfinding::prelude::*;
 use std::collections::HashMap;
 use std::fmt;
 use std::io::Write;
 use std::{thread, time};
 use termion;
-use termion::color;
 
 enum NeighborStatus {
     Void,
@@ -69,6 +68,16 @@ impl Map {
             anomaly: HashMap::new(),
             exits: Vec::new(),
         }
+    }
+
+    fn get_anomaly_name(&self, id: u8) -> String {
+        let mut res = String::new();
+        let ((ch1, ch2), _) = self.anomaly.iter().find(|(_k, v)| v.0 == id).unwrap();
+
+        res.push(*ch1);
+        res.push(*ch2);
+
+        res
     }
 
     fn check_teleport(&mut self, char_map: &Vec<Vec<char>>, x: usize, y: usize, sx: isize, sy: isize, side: &Side) -> Option<Cell> {
@@ -300,9 +309,9 @@ impl Map {
         result
     }
 
-    fn build_path(&self) -> Result<(Vec<PointU>, isize)> {
-        let p1 = self.exits[0].clone();
-        let p2 = self.exits[1].clone();
+    fn build_path(&self) -> Result<Vec<PointU>> {
+        let p1 = self.exits[1].clone();
+        let p2 = self.exits[0].clone();
         let map_size = self.size();
 
         ensure!(
@@ -324,7 +333,9 @@ impl Map {
             |pos| (pos.x as isize - p2.x as isize).abs() + (pos.y as isize - p2.y as isize).abs() + (pos.z as isize - p2.z as isize).abs() * 100,
             |pos| p2 == *pos,
         )
-        .unwrap_or((Vec::new(), 0)))
+        .unwrap_or((Vec::new(), 0)).0)
+
+        // Ok(bfs(&p1, |pos| self.neighbors(&pos), |pos| p2 == *pos).unwrap_or(Vec::new()))
     }
 
     fn draw_slide(&self, user: char, user_pos: &PointU, user_color: &Color, teleports: &Vec<(char, Color)>) {
@@ -345,7 +356,7 @@ impl Map {
                             let (ch, color) = &teleports[*id as usize];
 
                             if *side == Side::Outer && user_pos.z == 0 {
-                                buf += color_str(color, &"█".to_string()).as_str();
+                                buf += color_str(&Color::Red, &"X".to_string()).as_str();
                             } else {
                                 buf += color_str(color, &ch.to_string()).as_str();
                             }
@@ -354,7 +365,7 @@ impl Map {
                             let (_, color) = &teleports[*id as usize];
 
                             if user_pos.z > 0 {
-                                buf += color_str(color, &"█".to_string()).as_str();
+                                buf += color_str(&Color::Red, &"X".to_string()).as_str();
                             } else {
                                 buf += color_str(color, &"◊".to_string()).as_str();
                             }
@@ -410,8 +421,8 @@ impl Maze {
         println!("{:?}", self.map);
     }
 
-    fn dump_path(&self, path: &Vec<PointU>, len: isize) {
-        println!("Path[{}]:", len);
+    fn dump_path(&self, path: &Vec<PointU>) {
+        println!("Path[{}]:", path.len());
 
         for pos in path {
             print!("{}{:?}", "  ".repeat(pos.z), pos);
@@ -423,6 +434,35 @@ impl Maze {
                 _ => println!(),
             }
         }
+    }
+
+    fn dump_portals(&self, path: &Vec<PointU>) {
+        print!("Teleports:");
+
+        let mut prev_portal = false;
+        for pos in path {
+            let cell = self.map.cell(&pos);
+
+            match cell {
+                Cell::Exit(id) => {
+                    let name = self.map.get_anomaly_name(*id);
+                    print!(" {}", name);
+                }
+                Cell::Teleport(id, _, side) => {
+                    if prev_portal {
+                        prev_portal = false;
+                    } else {
+                        let sign = if *side == Side::Outer { '-' } else { '+' };
+                        let name = self.map.get_anomaly_name(*id);
+                        print!(" {}{}", sign, name);
+                        prev_portal = true;
+                    }
+                }
+                _ => {},
+            }
+        }
+
+        println!();
     }
 
     fn animate_path(&self, path: &Vec<PointU>) {
@@ -438,7 +478,7 @@ impl Maze {
         }
 
         for (i, pos) in path.iter().enumerate() {
-            self.map.draw_slide('●', &pos, &Color::Red, &teleports);
+            self.map.draw_slide('●', &pos, &Color::LightBlue, &teleports);
             println!("Level: {}", pos.z);
             println!("Step: {}/{}", i, path.len());
 
@@ -446,13 +486,32 @@ impl Maze {
         }
     }
 
-    pub fn find_shortest_path(&self, animate: bool) -> Result<usize> {
-        let (path, _len) = self.map.build_path()?;
+    fn validate_path(&self, path: &Vec<PointU>) -> Result<()> {
+        for pos in path {
+            let cell = self.map.cell(&pos);
 
-        // self.dump_path(&path, len);
+            match cell {
+                Cell::Void | Cell::Wall => bail!("Path node is in the wall or void."),
+                Cell::Teleport(_, _, side) if *side == Side::Outer && pos.z == 0 => bail!("Outer teleports are not available on the top level."),
+                Cell::Exit(_) if pos.z > 0 => bail!("Exits are available only on the top level."),
+                _ => {}
+            }
+        }
+        Ok(())
+    }
+
+    pub fn find_shortest_path(&self, animate: bool) -> Result<usize> {
+        let path = self.map.build_path()?;
+
+        self.validate_path(&path)?;
+
+        // self.dump_path(&path);
+
         if animate {
             self.animate_path(&path);
         }
+
+        self.dump_portals(&path);
 
         Ok(path.len() - 1)
     }

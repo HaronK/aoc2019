@@ -47,10 +47,10 @@ impl fmt::Debug for Cell {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let ch = match self {
             Self::Void => ' ',
-            Self::Wall => '#',
-            Self::Free => '.',
+            Self::Wall => '█',
+            Self::Free => '░',
             Self::Teleport(_, _, _) => '+',
-            Self::Exit(_) => '*',
+            Self::Exit(_) => '◊',
         };
         write!(f, "{}", ch)
     }
@@ -339,15 +339,25 @@ impl Map {
 
                     match cell {
                         Cell::Void => buf += " ",
-                        Cell::Wall => buf += "#",
-                        Cell::Free => buf += ".",
-                        Cell::Teleport(id, _, _) => {
+                        Cell::Wall => buf += "█",
+                        Cell::Free => buf += "░",
+                        Cell::Teleport(id, _, side) => {
                             let (ch, color) = &teleports[*id as usize];
-                            buf += color_str(color, &ch.to_string()).as_str();
+
+                            if *side == Side::Outer && user_pos.z == 0 {
+                                buf += color_str(color, &"█".to_string()).as_str();
+                            } else {
+                                buf += color_str(color, &ch.to_string()).as_str();
+                            }
                         }
                         Cell::Exit(id) => {
                             let (_, color) = &teleports[*id as usize];
-                            buf += color_str(color, &"+".to_string()).as_str();
+
+                            if user_pos.z > 0 {
+                                buf += color_str(color, &"█".to_string()).as_str();
+                            } else {
+                                buf += color_str(color, &"◊".to_string()).as_str();
+                            }
                         }
                     }
                 }
@@ -422,14 +432,15 @@ impl Maze {
 
         for (_, (id, _, _)) in &self.map.anomaly {
             let ch = ('0' as u8 + id % 10) as char;
-            let color = colors[(id / 10) as usize].clone();
+            let color = colors[*id as usize % colors.len()].clone();
 
             teleports[*id as usize] = (ch, color);
         }
 
-        for pos in path {
-            self.map.draw_slide('@', &pos, &Color::Red, &teleports);
+        for (i, pos) in path.iter().enumerate() {
+            self.map.draw_slide('●', &pos, &Color::Red, &teleports);
             println!("Level: {}", pos.z);
+            println!("Step: {}/{}", i, path.len());
 
             thread::sleep(delay);
         }

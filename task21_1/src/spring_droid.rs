@@ -10,9 +10,7 @@ impl<'l> SpringDroid<'l> {
     pub fn new(prog: &str, log: &'l Log) -> Result<Self> {
         let mut comp = IntcodeComp::new(Vec::new(), log);
         comp.load_prog(prog)?;
-        let res = Self {
-            comp,
-        };
+        let res = Self { comp };
         Ok(res)
     }
 

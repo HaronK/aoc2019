@@ -116,7 +116,12 @@ impl Route {
         res
     }
 
-    fn find_shortest_path(&mut self, nest: usize, map: &Map, cur_min: usize) -> Result<(usize, Vec<char>)> {
+    fn find_shortest_path(
+        &mut self,
+        nest: usize,
+        map: &Map,
+        cur_min: usize,
+    ) -> Result<(usize, Vec<char>)> {
         let mut result = 0;
         let mut cur_pos = self.start_pos.clone();
         let mut keys = Vec::new();
@@ -203,7 +208,7 @@ impl Route {
                         );
                         continue;
                     }
-    
+
                     let mut route_copy = self.clone();
 
                     let branch_path = route_copy.remove_key(ch).unwrap();

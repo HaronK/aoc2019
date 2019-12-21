@@ -35,7 +35,10 @@ impl Cell {
     fn to_exit(&mut self) -> bool {
         let mut res = false;
         *self = match std::mem::replace(self, Self::Exit(Default::default())) {
-            Self::Teleport(id, p, _) if p == PointU::max() => { res = true; Self::Exit(id) }
+            Self::Teleport(id, p, _) if p == PointU::max() => {
+                res = true;
+                Self::Exit(id)
+            }
             v => v,
         };
         res
@@ -80,7 +83,15 @@ impl Map {
         res
     }
 
-    fn check_teleport(&mut self, char_map: &Vec<Vec<char>>, x: usize, y: usize, sx: isize, sy: isize, side: &Side) -> Option<Cell> {
+    fn check_teleport(
+        &mut self,
+        char_map: &Vec<Vec<char>>,
+        x: usize,
+        y: usize,
+        sx: isize,
+        sy: isize,
+        side: &Side,
+    ) -> Option<Cell> {
         let (dx1, dx2, dy1, dy2) = if sx == 0 {
             if sy == 1 {
                 (x, x, y + 1, y + 2)
@@ -100,7 +111,10 @@ impl Map {
         if char_map[ty][tx].is_alphanumeric() {
             let name = (char_map[dy1][dx1], char_map[dy2][dx2]);
             let mut id = self.anomaly.len() as u8;
-            let entry = self.anomaly.entry(name).or_insert((id, PointU::max(), PointU::max()));
+            let entry = self
+                .anomaly
+                .entry(name)
+                .or_insert((id, PointU::max(), PointU::max()));
 
             id = entry.0;
 
@@ -120,7 +134,7 @@ impl Map {
                 p
             };
 
-            return Some(Cell::Teleport(id as u8, pos, side.clone()))
+            return Some(Cell::Teleport(id as u8, pos, side.clone()));
         }
         None
     }
@@ -181,7 +195,11 @@ impl Map {
                 }
             }
         }
-        ensure!(self.exits.len() == 2, "Expected 2 exits but was {}", self.exits.len());
+        ensure!(
+            self.exits.len() == 2,
+            "Expected 2 exits but was {}",
+            self.exits.len()
+        );
 
         Ok(())
     }
@@ -209,7 +227,7 @@ impl Map {
             Cell::Exit(_) if z > 0 => NeighborStatus::Blocked,
             _ => NeighborStatus::Free(pos),
         }
-}
+    }
 
     fn cell2north(&self, pos: &PointU) -> NeighborStatus {
         if pos.y == 0 {
@@ -330,18 +348,29 @@ impl Map {
         Ok(astar(
             &p1,
             |pos| self.neighbors(&pos).into_iter().map(|p| (p, 1)),
-            |pos| (pos.x as isize - p2.x as isize).abs() + (pos.y as isize - p2.y as isize).abs() + (pos.z as isize - p2.z as isize).abs() * 100,
+            |pos| {
+                (pos.x as isize - p2.x as isize).abs()
+                    + (pos.y as isize - p2.y as isize).abs()
+                    + (pos.z as isize - p2.z as isize).abs() * 100
+            },
             |pos| p2 == *pos,
         )
-        .unwrap_or((Vec::new(), 0)).0)
+        .unwrap_or((Vec::new(), 0))
+        .0)
 
         // Ok(bfs(&p1, |pos| self.neighbors(&pos), |pos| p2 == *pos).unwrap_or(Vec::new()))
     }
 
-    fn draw_slide(&self, user: char, user_pos: &PointU, user_color: &Color, teleports: &Vec<(char, Color)>) {
+    fn draw_slide(
+        &self,
+        user: char,
+        user_pos: &PointU,
+        user_color: &Color,
+        teleports: &Vec<(char, Color)>,
+    ) {
         let mut buf = String::new();
         let sz = self.size();
-        for y in 0.. sz.y {
+        for y in 0..sz.y {
             for x in 0..sz.x {
                 if user_pos.x == x && user_pos.y == y {
                     buf += color_str(user_color, &user.to_string()).as_str();
@@ -464,7 +493,7 @@ impl Maze {
                         prev_portal = true;
                     }
                 }
-                _ => {},
+                _ => {}
             }
         }
 
@@ -473,7 +502,13 @@ impl Maze {
 
     fn animate_path(&self, path: &Vec<PointU>) {
         let delay = time::Duration::from_millis(100);
-        let colors = vec![Color::Green, Color::Yellow, Color::Blue, Color::Magenta, Color::Cyan];
+        let colors = vec![
+            Color::Green,
+            Color::Yellow,
+            Color::Blue,
+            Color::Magenta,
+            Color::Cyan,
+        ];
         let mut teleports = vec![('0', Color::White); self.map.anomaly.len()];
 
         for (_, (id, _, _)) in &self.map.anomaly {
@@ -484,7 +519,8 @@ impl Maze {
         }
 
         for (i, pos) in path.iter().enumerate() {
-            self.map.draw_slide('●', &pos, &Color::LightBlue, &teleports);
+            self.map
+                .draw_slide('●', &pos, &Color::LightBlue, &teleports);
             println!("Level: {}", pos.z);
             println!("Step: {}/{}", i, path.len());
 
@@ -498,7 +534,9 @@ impl Maze {
 
             match cell {
                 Cell::Void | Cell::Wall => bail!("Path node is in the wall or void."),
-                Cell::Teleport(_, _, side) if *side == Side::Outer && pos.z == 0 => bail!("Outer teleports are not available on the top level."),
+                Cell::Teleport(_, _, side) if *side == Side::Outer && pos.z == 0 => {
+                    bail!("Outer teleports are not available on the top level.")
+                }
                 Cell::Exit(_) if pos.z > 0 => bail!("Exits are available only on the top level."),
                 _ => {}
             }

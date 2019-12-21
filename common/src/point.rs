@@ -40,7 +40,11 @@ impl<T> Point<T> {
 
 impl<T: Default> Point<T> {
     pub fn new(x: T, y: T) -> Self {
-        Self { x, y, z: T::default() }
+        Self {
+            x,
+            y,
+            z: T::default(),
+        }
     }
 
     pub fn set(&mut self, x: T, y: T) {

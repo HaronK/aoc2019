@@ -27,16 +27,9 @@ fn main() -> Result<()> {
     // )?;
 
     // Task 2
-    let dust_count = droid.move_droid(
-        &["OR B J",
-        "AND C J",
-        "NOT J J",
-        "AND D J",
-        "AND H J",
-        "NOT A T",
-        "OR T J",
-        "RUN"]
-    )?;
+    let dust_count = droid.move_droid(&[
+        "OR B J", "AND C J", "NOT J J", "AND D J", "AND H J", "NOT A T", "OR T J", "RUN",
+    ])?;
 
     println!("Dust count: {}", dust_count);
 
@@ -62,7 +55,7 @@ fn main() -> Result<()> {
 fn gen_combinations(v1: &[&str], v2: &[&str], v3: &[&str]) -> Vec<String> {
     let mut res = Vec::new();
 
-    for s1  in v1 {
+    for s1 in v1 {
         for s2 in v2 {
             for s3 in v3 {
                 let mut s = String::new();

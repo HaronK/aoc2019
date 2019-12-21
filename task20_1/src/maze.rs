@@ -19,7 +19,10 @@ impl Cell {
     fn to_exit(&mut self) -> bool {
         let mut res = false;
         *self = match std::mem::replace(self, Self::Exit(Default::default())) {
-            Self::Teleport(id, p) if p == PointU::max() => { res = true; Self::Exit(id) }
+            Self::Teleport(id, p) if p == PointU::max() => {
+                res = true;
+                Self::Exit(id)
+            }
             v => v,
         };
         res
@@ -54,7 +57,14 @@ impl Map {
         }
     }
 
-    fn check_teleport(&mut self, char_map: &Vec<Vec<char>>, x: usize, y: usize, sx: isize, sy: isize) -> Option<Cell> {
+    fn check_teleport(
+        &mut self,
+        char_map: &Vec<Vec<char>>,
+        x: usize,
+        y: usize,
+        sx: isize,
+        sy: isize,
+    ) -> Option<Cell> {
         let (dx1, dx2, dy1, dy2) = if sx == 0 {
             if sy == 1 {
                 (x, x, y + 1, y + 2)
@@ -74,7 +84,10 @@ impl Map {
         if char_map[ty][tx].is_alphanumeric() {
             let name = (char_map[dy1][dx1], char_map[dy2][dx2]);
             let id = self.anomaly.len() as u8;
-            let entry = self.anomaly.entry(name).or_insert((id, PointU::max(), PointU::max()));
+            let entry = self
+                .anomaly
+                .entry(name)
+                .or_insert((id, PointU::max(), PointU::max()));
 
             let cur_pos = PointU::new(x - 2, y - 2);
             let pos = if entry.1 == PointU::max() {
@@ -88,7 +101,7 @@ impl Map {
                 p
             };
 
-            return Some(Cell::Teleport(id as u8, pos))
+            return Some(Cell::Teleport(id as u8, pos));
         }
         None
     }
@@ -143,7 +156,11 @@ impl Map {
                 }
             }
         }
-        ensure!(self.exits.len() == 2, "Expected 2 exits but was {}", self.exits.len());
+        ensure!(
+            self.exits.len() == 2,
+            "Expected 2 exits but was {}",
+            self.exits.len()
+        );
 
         Ok(())
     }

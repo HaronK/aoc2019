@@ -59,7 +59,7 @@ impl Map {
 
     fn check_teleport(
         &mut self,
-        char_map: &Vec<Vec<char>>,
+        char_map: &[Vec<char>],
         x: usize,
         y: usize,
         sx: isize,
@@ -71,12 +71,10 @@ impl Map {
             } else {
                 (x, x, y - 2, y - 1)
             }
+        } else if sx == 1 {
+            (x + 1, x + 2, y, y)
         } else {
-            if sx == 1 {
-                (x + 1, x + 2, y, y)
-            } else {
-                (x - 2, x - 1, y, y)
-            }
+            (x - 2, x - 1, y, y)
         };
 
         let tx = (x as isize + sx) as usize;

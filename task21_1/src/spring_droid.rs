@@ -48,7 +48,7 @@ impl<'l> SpringDroid<'l> {
         result
     }
 
-    fn output2str(data: &Vec<DataType>) -> String {
+    fn output2str(data: &[DataType]) -> String {
         let mut res = String::new();
 
         for v in data {

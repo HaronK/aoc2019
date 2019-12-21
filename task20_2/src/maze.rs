@@ -85,7 +85,7 @@ impl Map {
 
     fn check_teleport(
         &mut self,
-        char_map: &Vec<Vec<char>>,
+        char_map: &[Vec<char>],
         x: usize,
         y: usize,
         sx: isize,
@@ -98,12 +98,10 @@ impl Map {
             } else {
                 (x, x, y - 2, y - 1)
             }
+        } else if sx == 1 {
+            (x + 1, x + 2, y, y)
         } else {
-            if sx == 1 {
-                (x + 1, x + 2, y, y)
-            } else {
-                (x - 2, x - 1, y, y)
-            }
+            (x - 2, x - 1, y, y)
         };
 
         let tx = (x as isize + sx) as usize;
@@ -366,7 +364,7 @@ impl Map {
         user: char,
         user_pos: &PointU,
         user_color: &Color,
-        teleports: &Vec<(char, Color)>,
+        teleports: &[(char, Color)],
     ) {
         let mut buf = String::new();
         let sz = self.size();
@@ -450,7 +448,7 @@ impl Maze {
         println!("{:?}", self.map);
     }
 
-    fn dump_path(&self, path: &Vec<PointU>) {
+    fn dump_path(&self, path: &[PointU]) {
         println!("Path[{}]:", path.len());
 
         for pos in path {
@@ -471,7 +469,7 @@ impl Maze {
         }
     }
 
-    fn dump_portals(&self, path: &Vec<PointU>) {
+    fn dump_portals(&self, path: &[PointU]) {
         print!("Teleports:");
 
         let mut prev_portal = false;
@@ -500,7 +498,7 @@ impl Maze {
         println!();
     }
 
-    fn animate_path(&self, path: &Vec<PointU>) {
+    fn animate_path(&self, path: &[PointU]) {
         let delay = time::Duration::from_millis(100);
         let colors = vec![
             Color::Green,
@@ -511,8 +509,8 @@ impl Maze {
         ];
         let mut teleports = vec![('0', Color::White); self.map.anomaly.len()];
 
-        for (_, (id, _, _)) in &self.map.anomaly {
-            let ch = ('0' as u8 + id % 10) as char;
+        for (id, _, _) in self.map.anomaly.values() {
+            let ch = (b'0' + id % 10) as char;
             let color = colors[*id as usize % colors.len()].clone();
 
             teleports[*id as usize] = (ch, color);
@@ -528,7 +526,7 @@ impl Maze {
         }
     }
 
-    fn validate_path(&self, path: &Vec<PointU>) -> Result<()> {
+    fn validate_path(&self, path: &[PointU]) -> Result<()> {
         for pos in path {
             let cell = self.map.cell(&pos);
 

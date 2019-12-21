@@ -21,9 +21,9 @@ pub enum Color {
     LightWhite,
 }
 
-pub fn color_str(color: &Color, text: &String) -> String {
+pub fn color_str(color: &Color, text: &str) -> String {
     match color {
-        Color::Black => format!("{}", text),
+        Color::Black => text.to_string(),
         Color::Red => format!(
             "{}{}{}",
             color::Bg(color::Red),

@@ -296,20 +296,22 @@ impl Route {
 
             // check if there are no other doors on the path
             let cur_path = map.build_path(cur_pos, &pos)?;
-            if self.paths.iter().any(|(_ch, key_info1)| {
+            let contains_door = self.paths.iter().any(|(_ch, key_info1)| {
                 if let Some(door_pos) = key_info1.door_pos() {
                     return cur_path.contains(&door_pos);
                 }
                 false
-            }) {
+            });
+
+            if contains_door {
                 continue 'p2;
             }
 
             let mut additional_keys = Vec::new();
 
             if cur_path.len() > 2 {
-                for i in 1..cur_path.len() - 1 {
-                    let add_ch = map.value(&cur_path[i]);
+                for p in cur_path.iter().take(cur_path.len() - 1).skip(1) {
+                    let add_ch = map.value(&p);
                     if *ch != add_ch && self.paths.contains_key(&add_ch) {
                         additional_keys.push(add_ch);
                     }
@@ -436,7 +438,7 @@ impl Vault {
                         .route
                         .paths
                         .entry(key)
-                        .or_insert(KeyInfo::WithDoor(KeyDoorPath::default()));
+                        .or_insert_with(|| KeyInfo::WithDoor(KeyDoorPath::default()));
 
                     if let KeyInfo::WithDoor(path) = key_info {
                         if c.is_lowercase() {
@@ -456,7 +458,7 @@ impl Vault {
         println!("Map: {:?}", self.map.size());
 
         // convert single keys
-        for (_ch, key_info) in &mut self.route.paths {
+        for key_info in &mut self.route.paths.values_mut() {
             if let Some(door_pos) = key_info.door_pos() {
                 if door_pos.x == std::usize::MAX && door_pos.y == std::usize::MAX {
                     key_info.to_single();

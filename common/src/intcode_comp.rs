@@ -176,6 +176,11 @@ impl<'l> IntcodeComp<'l> {
         self.input.push(input);
     }
 
+    pub fn set_input(&mut self, input: DataType) {
+        self.input.clear();
+        self.add_input(input);
+    }
+
     pub fn add_input_vec(&mut self, mut input: &mut Vec<DataType>) {
         self.input.append(&mut input);
     }

@@ -8,9 +8,9 @@ mod biome_field;
 fn main() -> Result<()> {
     let content = get_file_content("input.txt")?;
     let mut field = BiomeField::new(&content)?;
-    let rating = field.get_rating();
+    let bugs_count = field.bugs_count(200);
 
-    println!("Rating: {}", rating);
+    println!("Bugs count: {}", bugs_count);
 
     Ok(())
 }
@@ -31,7 +31,8 @@ mod tests {
     #[test]
     fn test1() -> Result<()> {
         common_test(
-            2129920,
+            99,
+            10,
             r#"....#
             #..#.
             #..##
@@ -40,11 +41,11 @@ mod tests {
         )
     }
 
-    fn common_test(expected_rating: u64, data: &str) -> Result<()> {
+    fn common_test(expected_bugs: usize, steps: usize, data: &str) -> Result<()> {
         let mut field = BiomeField::new(data)?;
-        let rating = field.get_rating();
+        let bugs_count = field.bugs_count(steps);
 
-        assert_eq!(expected_rating, rating);
+        assert_eq!(expected_bugs, bugs_count);
 
         Ok(())
     }

@@ -95,9 +95,9 @@ pub struct BiomeField {
 impl BiomeField {
     pub fn new(data: &str) -> Result<Self> {
         let mut map = Map::new();
-        
+
         map.load(data)?;
-        
+
         Ok(Self { stages: vec![map] })
     }
 

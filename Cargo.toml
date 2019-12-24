@@ -24,4 +24,5 @@ members = [
     "task21_1",
     "task22_1", "task22_2",
     "task23_1", "task23_2",
+    "task24_1",
 ]

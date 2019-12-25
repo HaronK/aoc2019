@@ -4,7 +4,7 @@ use std::io::Write;
 use termion;
 use termion::color;
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Direction {
     North,
     South,
@@ -61,6 +61,10 @@ impl<T> DynamicMap<T> {
         self.position.clone()
     }
 
+    pub fn to_start(&mut self) {
+        self.position = PointI::default();
+    }
+
     pub fn offset(&self) -> PointU {
         self.start_offset.clone()
     }
@@ -94,6 +98,19 @@ impl<T: Clone> DynamicMap<T> {
 impl<T: Clone + Default> DynamicMap<T> {
     pub fn get_cell_by_xy(&self, x: usize, y: usize) -> T {
         self.map[y][x].clone()
+    }
+
+    pub fn get_cell_dir(&mut self, dir: &Direction) -> T {
+        self.do_move(dir);
+        let cell = self.get_cell();
+        self.do_move(&dir.opposite());
+        cell
+    }
+
+    pub fn set_cell_dir(&mut self, dir: &Direction, value: T) {
+        self.do_move(dir);
+        self.set_cell(value);
+        self.do_move(&dir.opposite());
     }
 
     pub fn do_move(&mut self, dir: &Direction) -> T {
@@ -168,7 +185,15 @@ impl<T: CellDisplay> DynamicMap<T> {
         self.show_with_path(f, &Vec::new())
     }
 
-    pub fn show_with_path(&self, _f: &mut dyn Write, path: &[PointU]) -> Result<()> {
+    pub fn show_with_msg(&self, f: &mut dyn Write, msg: &String) -> Result<()> {
+        self.show_with_path_msg(f, &Vec::new(), msg)
+    }
+
+    pub fn show_with_path(&self, f: &mut dyn Write, path: &[PointU]) -> Result<()> {
+        self.show_with_path_msg(f, path, &"".to_string())
+    }
+
+    pub fn show_with_path_msg(&self, f: &mut dyn Write, path: &[PointU], msg: &String) -> Result<()> {
         let mut buf = String::new();
         let abs_pos = self.abs_position();
 
@@ -201,13 +226,28 @@ impl<T: CellDisplay> DynamicMap<T> {
             buf.push('\n');
         }
 
-        print!(
-            "{}{}{}",
+        write!(f,
+            "{}",
             termion::clear::All,
-            termion::cursor::Goto(1, 1),
-            buf
-        );
-        std::io::stdout().flush().unwrap();
+        )?;
+
+        let mut pos = 1;
+
+        for line in buf.lines() {
+            write!(f,
+                "{}{}",
+                termion::cursor::Goto(1, pos),
+                line
+            )?;
+            pos += 1;
+        }
+
+        for line in msg.lines() {
+            write!(f, "{}{}", termion::cursor::Goto(1, pos), line)?;
+            pos += 1;
+        }
+
+        // std::io::stdout().flush().unwrap();
 
         Ok(())
     }
